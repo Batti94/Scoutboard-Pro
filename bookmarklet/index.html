@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScoutBoard Pro – Kader Import einrichten</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:#0a1a0f;color:#f0f0eb;min-height:100vh;padding:24px;}
+  .wrap{max-width:600px;margin:0 auto;}
+  .logo{font-family:Georgia,serif;font-size:1.6rem;font-weight:700;color:#e8c84a;margin-bottom:4px;}
+  .logo span{color:#f0f0eb;}
+  .tagline{font-size:.8rem;color:#7a9080;margin-bottom:32px;}
+  .card{background:#112918;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:24px;margin-bottom:16px;}
+  .card-title{font-size:1rem;font-weight:700;color:#e8c84a;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .step{display:flex;gap:12px;margin-bottom:16px;align-items:flex-start;}
+  .step:last-child{margin-bottom:0;}
+  .snum{background:#e8c84a;color:#0a1a0f;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0;margin-top:1px;}
+  .sbody{font-size:.86rem;color:#c0d0c8;line-height:1.65;}
+  .sbody strong{color:#f0f0eb;}
+  .bm-wrap{margin:12px 0;}
+  .bm-btn{display:inline-block;background:#e8c84a;color:#0a1a0f;font-weight:700;font-size:.95rem;padding:10px 22px;border-radius:8px;text-decoration:none;cursor:grab;border:3px dashed transparent;transition:all .2s;user-select:none;}
+  .bm-btn:hover{border-color:#fff;transform:scale(1.02);}
+  .hint{background:rgba(232,200,74,.07);border:1px solid rgba(232,200,74,.18);border-radius:8px;padding:10px 14px;font-size:.78rem;color:#9ab0a0;line-height:1.7;margin-top:10px;}
+  .hint strong{color:#e8c84a;}
+  .back{display:inline-flex;align-items:center;gap:6px;color:#7a9080;font-size:.82rem;text-decoration:none;margin-bottom:20px;}
+  .back:hover{color:#e8c84a;}
+  .badge{display:inline-block;background:rgba(39,174,96,.15);border:1px solid rgba(39,174,96,.3);color:#27ae60;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;}
+  .divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:20px 0;}
+  .usage-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:.85rem;color:#c0d0c8;line-height:1.5;}
+  .usage-row:last-child{margin-bottom:0;}
+  .icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" class="back">← Zurück zu ScoutBoard Pro</a>
+
+  <div class="logo">Scout<span>Board</span> PRO</div>
+  <div class="tagline">Kader-Import Einrichtung</div>
+
+  <!-- BOOKMARKLET SETUP -->
+  <div class="card">
+    <div class="card-title">
+      ⚽ Bookmarklet einrichten
+      <span class="badge">Empfohlen</span>
+    </div>
+
+    <div class="step">
+      <div class="snum">1</div>
+      <div class="sbody">
+        <strong>Lesezeichenleiste einblenden</strong><br>
+        Falls nicht sichtbar: <strong>Strg+Shift+B</strong> (Windows) oder <strong>Cmd+Shift+B</strong> (Mac)
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="snum">2</div>
+      <div class="sbody">
+        <strong>Diesen Button in die Lesezeichenleiste ziehen:</strong>
+        <div class="bm-wrap">
+          <a id="bmBtn" href="#" class="bm-btn">⚽ TM → ScoutBoard</a>
+        </div>
+        <div class="hint">
+          <strong>Desktop:</strong> Button mit der Maus direkt in die Lesezeichenleiste ziehen.<br>
+          <strong>iPad/iPhone:</strong> Seite als Lesezeichen speichern → Lesezeichen bearbeiten → URL durch den Code unten ersetzen.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="snum">3</div>
+      <div class="sbody">
+        <strong>Fertig!</strong> Das Bookmarklet ist eingerichtet.
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="font-size:.8rem;font-weight:700;color:#7a9080;margin-bottom:12px;">📋 CODE FÜR IPAD/IPHONE</div>
+    <textarea id="codeBox" readonly style="width:100%;height:72px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);color:#e8c84a;font-size:.7rem;padding:10px;border-radius:8px;resize:none;font-family:monospace;"></textarea>
+    <button onclick="copyCode()" style="margin-top:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#f0f0eb;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:.8rem;">📋 Code kopieren</button>
+    <span id="copyMsg" style="font-size:.78rem;color:#27ae60;margin-left:8px;display:none;">✓ Kopiert!</span>
+  </div>
+
+  <!-- HOW TO USE -->
+  <div class="card">
+    <div class="card-title">🏃 So importierst du einen Kader</div>
+
+    <div class="usage-row">
+      <span class="icon">1️⃣</span>
+      <span>Geh auf <strong>transfermarkt.de</strong> und öffne die Kaderseite eines Vereins<br>
+      z.B. <span style="color:#e8c84a;font-size:.8rem;">transfermarkt.de/first-vienna-fc/kader/verein/2364</span></span>
+    </div>
+    <div class="usage-row">
+      <span class="icon">2️⃣</span>
+      <span>Klicke das Bookmarklet <strong>⚽ TM → ScoutBoard</strong> in deiner Lesezeichenleiste</span>
+    </div>
+    <div class="usage-row">
+      <span class="icon">3️⃣</span>
+      <span>Ein Popup erscheint — bestätige oder ändere den Kadernamen</span>
+    </div>
+    <div class="usage-row">
+      <span class="icon">4️⃣</span>
+      <span>ScoutBoard öffnet sich automatisch — wähle <strong>„Ersetzen"</strong> oder <strong>„Hinzufügen"</strong></span>
+    </div>
+    <div class="usage-row">
+      <span class="icon">✅</span>
+      <span>Kader ist importiert und gespeichert — fertig!</span>
+    </div>
+  </div>
+
+  <!-- ALTERNATIVE: CSV -->
+  <div class="card">
+    <div class="card-title">📋 Alternative: CSV Import</div>
+    <div style="font-size:.84rem;color:#c0d0c8;line-height:1.65;">
+      Falls das Bookmarklet nicht funktioniert, kannst du Kader auch per CSV importieren.<br><br>
+      <strong style="color:#f0f0eb;">Format:</strong> Semikolon-getrennt, eine Zeile pro Spieler:<br>
+      <code style="background:rgba(0,0,0,.3);padding:3px 8px;border-radius:4px;color:#e8c84a;font-size:.8rem;display:block;margin:10px 0;">Nummer;Name;Position</code>
+      Beispiel:<br>
+      <code style="background:rgba(0,0,0,.3);padding:3px 8px;border-radius:4px;color:#e8c84a;font-size:.8rem;display:block;margin:10px 0;">1;Unger;TW<br>4;Szerencsi;IV<br>7;Monschein;ST</code>
+      In ScoutBoard: <strong>📋 CSV</strong> Button im Header klicken → Datei auswählen.
+    </div>
+  </div>
+
+  <a href="/" style="display:block;text-align:center;background:#e8c84a;color:#0a1a0f;font-weight:700;padding:12px;border-radius:8px;text-decoration:none;margin-top:8px;">→ Zurück zu ScoutBoard Pro</a>
+</div>
+
+<script>
+var code = 'javascript:(function(){' +
+  'var rows=document.querySelectorAll("table.items tbody tr.odd,table.items tbody tr.even");' +
+  'if(!rows.length){alert("Keine Kaderdaten gefunden. Bitte auf einer Transfermarkt Kaderseite ausfuehren.");return;}' +
+  'var players=[];' +
+  'var posMap={"Torwart":"TW","Goalkeeper":"TW","Innenverteidiger":"IV","Centre-Back":"IV","Linker Verteidiger":"LV","Left-Back":"LV","Rechter Verteidiger":"RV","Right-Back":"RV","Defensives Mittelfeld":"DM","Defensive Midfield":"DM","Zentrales Mittelfeld":"ZM","Central Midfield":"ZM","Offensives Mittelfeld":"OM","Attacking Midfield":"OM","Linksaußen":"LA","Left Winger":"LA","Rechtsaußen":"RA","Right Winger":"RA","Hängende Spitze":"HS","Second Striker":"HS","Mittelstürmer":"ST","Centre-Forward":"ST"};' +
+  'rows.forEach(function(row){' +
+    'var numEl=row.querySelector("td.zentriert");' +
+    'var nameEl=row.querySelector("td.hauptlink a")||row.querySelector("a.spielprofil_tooltip");' +
+    'var posEl=row.querySelector("td[title]");' +
+    'if(!nameEl)return;' +
+    'var num=numEl?numEl.textContent.trim():"?";' +
+    'var name=nameEl.textContent.trim();' +
+    'var lastName=name.split(" ").pop();' +
+    'var rawPos=posEl?posEl.getAttribute("title"):"";' +
+    'var pos=posMap[rawPos]||rawPos.substring(0,3)||"-";' +
+    'if(lastName&&!players.find(function(p){return p.name===lastName;}))players.push({num:num,name:lastName,pos:pos});' +
+  '});' +
+  'if(!players.length){alert("Keine Spieler erkannt.");return;}' +
+  'var teamEl=document.querySelector("h1.data-header__headline-wrapper--oswald span:last-child")||document.querySelector(".data-header__headline-wrapper");' +
+  'var team=teamEl?teamEl.textContent.trim().replace(/\\s+/g," "):"Unbekannt";' +
+  'var name=prompt("Kadername:",team);' +
+  'if(!name)return;' +
+  'var payload=encodeURIComponent(JSON.stringify({team:name,players:players}));' +
+  'window.open("https://scoutboard-pro.vercel.app/?import="+payload,"_blank");' +
+'})();';
+
+document.getElementById('bmBtn').href = code;
+document.getElementById('codeBox').value = code;
+
+function copyCode() {
+  var box = document.getElementById('codeBox');
+  box.select();
+  box.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(box.value).then(function() {
+    var msg = document.getElementById('copyMsg');
+    msg.style.display = 'inline';
+    setTimeout(function(){ msg.style.display='none'; }, 2500);
+  });
+}
+</script>
+</body>
+</html>
