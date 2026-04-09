@@ -2330,12 +2330,17 @@ function startSubFieldDragTouch(e, sid) {
 function onSubFieldDragMove(e) { if(dragSubFieldId) moveSubField(e.clientX, e.clientY); }
 function onSubFieldDragMoveT(e) { e.preventDefault(); if(dragSubFieldId) moveSubField(e.touches[0].clientX, e.touches[0].clientY); }
 
+function getActiveSubs() {
+  if(curView === 'combined' && snapshots.combined) return snapshots.combined.subs;
+  return subs;
+}
+
 function moveSubField(cx, cy) {
   const pitch = document.getElementById('pitch');
   const rect = pitch.getBoundingClientRect();
   const nx = Math.max(0.03, Math.min(0.97, (cx - rect.left - dragSubFieldOff.x)/rect.width));
   const ny = Math.max(0.03, Math.min(0.97, (cy - rect.top - dragSubFieldOff.y)/rect.height));
-  const s = subs.find(x=>x.id===dragSubFieldId);
+  const s = getActiveSubs().find(x=>x.id===dragSubFieldId);
   if(s) { s.fieldX=nx; s.fieldY=ny; }
   const el = document.querySelector(`.player[data-sid="${dragSubFieldId}"]`);
   if(el) {
@@ -2351,7 +2356,7 @@ function onSubFieldDragEndT() { dragSubFieldId=null; document.removeEventListene
 function selectSubOnField(sid) {
   selSubId = sid;
   selId = null;
-  const s = subs.find(x=>x.id===sid);
+  const s = getActiveSubs().find(x=>x.id===sid);
   if(!s) return;
   document.getElementById('epTitle').textContent = '↑ Einwechsler';
   document.getElementById('epNum').value = s.num||'';
