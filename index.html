@@ -760,9 +760,10 @@ function init() {
   bindInputs();
   bindPitchClick();
   setupArrowCanvas();
-  renderAll();
   updateRosterSelect();
-  switchLineupView(curView);
+  renderSavedRosterList();
+  renderLineupList();
+  switchLineupView(curView); // renders pitch + all
   // Show import hint if no rosters yet and not dismissed
   const hint = document.getElementById('importHint');
   if(hint && !localStorage.getItem('sb_hint_dismissed') && savedRosters.length === 0) {
@@ -2615,8 +2616,8 @@ function loadStorage() {
     if(d.players?.length) players = d.players;
     if(d.roster?.length) roster = d.roster;
     if(d.subs?.length) subs = d.subs;
-    if(d.savedLineups?.length) savedLineups = d.savedLineups;
-    if(d.savedRosters?.length) savedRosters = d.savedRosters;
+    savedLineups = d.savedLineups || [];
+    savedRosters = d.savedRosters || [];
     if(d.arrows?.length) arrows = d.arrows;
     curRosterId = d.curRosterId ?? null;
     curLineupId = d.curLineupId ?? null;
