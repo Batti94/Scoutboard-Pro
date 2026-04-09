@@ -2589,11 +2589,11 @@ function renderStats() {
 // ===================================================
 function saveStorage() {
   try {
-    // Save current view state into snapshot (skip combined — it's derived)
     if(curView !== 'combined') snapshots[curView] = getSnapshot();
-    localStorage.setItem('sbpro_v5', JSON.stringify({
-      curFormation, players, roster, subs, savedLineups,
-      savedRosters, curRosterId, curLineupId, nextSrid,
+    const data = {
+      curFormation, players, roster, subs,
+      savedLineups, savedRosters,
+      curRosterId, curLineupId, nextSrid,
       arrows, nextPid, nextRid, nextLid, nextSubId,
       curView, snapshots,
       meta: {
@@ -2603,8 +2603,29 @@ function saveStorage() {
         score: document.getElementById('iScore').value,
         notes: document.getElementById('iNotes').value,
       }
-    }));
-  } catch(e){ console.error('saveStorage error:', e); }
+    };
+    const json = JSON.stringify(data);
+    localStorage.setItem('sbpro_v5', json);
+  } catch(e){
+    console.error('saveStorage failed:', e);
+    // Fallback: save only critical data without snapshots
+    try {
+      localStorage.setItem('sbpro_v5', JSON.stringify({
+        curFormation, players, roster, subs,
+        savedLineups, savedRosters,
+        curRosterId, curLineupId, nextSrid,
+        arrows, nextPid, nextRid, nextLid, nextSubId,
+        curView,
+        meta: {
+          team: document.getElementById('iTeam').value,
+          opp: document.getElementById('iOpp').value,
+          date: document.getElementById('iDate').value,
+          score: document.getElementById('iScore').value,
+          notes: document.getElementById('iNotes').value,
+        }
+      }));
+    } catch(e2){ console.error('saveStorage fallback failed:', e2); }
+  }
 }
 
 function loadStorage() {
