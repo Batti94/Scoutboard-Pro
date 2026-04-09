@@ -295,10 +295,11 @@ textarea{resize:vertical;min-height:70px;}
   <div class="hsep"></div>
   <button class="hbtn" onclick="undo()">↩ Undo</button>
   <button class="hbtn" onclick="resetLineup()">↺ Reset</button>
-  <button class="hbtn" onclick="triggerCSV()">📋 CSV Import</button>
+  <button class="hbtn" onclick="triggerCSV()">📋 CSV</button>
   <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="importCSV(event)">
+  <button class="hbtn acc" onclick="openUrlImport()">🔗 Kader importieren</button>
   <button class="hbtn" onclick="saveLineup()">💾 Speichern</button>
-  <button class="hbtn acc" onclick="openExportModal()">📷 Export</button>
+  <button class="hbtn" onclick="openExportModal()">📷 Export</button>
 </header>
 
 <!-- LINEUP VIEW -->
@@ -488,6 +489,23 @@ textarea{resize:vertical;min-height:70px;}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- URL IMPORT MODAL -->
+<div id="urlImportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;">
+  <div style="background:var(--gd);border:1px solid var(--pb);border-radius:14px;padding:24px;max-width:460px;width:92%;display:flex;flex-direction:column;gap:14px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.08em;color:var(--acc);">🔗 Kader von Transfermarkt importieren</div>
+    <div style="font-size:.78rem;color:var(--gr);line-height:1.6;">
+      Kopiere die URL der Transfermarkt-Vereinsseite und füge sie hier ein.<br>
+      <span style="color:var(--wh);">z.B.: transfermarkt.de/first-vienna-fc/startseite/verein/2364</span>
+    </div>
+    <input type="text" id="urlImportInput" placeholder="https://www.transfermarkt.de/..." style="width:100%;font-size:.85rem;padding:10px 12px;">
+    <div id="urlImportStatus" style="font-size:.78rem;min-height:20px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn sec" style="flex:1;" onclick="closeUrlImport()">Abbrechen</button>
+      <button class="btn" style="flex:1;" id="urlImportBtn" onclick="runUrlImport()">🔍 Kader laden</button>
+    </div>
+  </div>
+</div>
 
 <!-- EXPORT MODAL -->
 <div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;">
@@ -1687,6 +1705,64 @@ function assignRoster(r) {
 // ===================================================
 // CSV IMPORT
 // ===================================================
+function openUrlImport() {
+  document.getElementById('urlImportModal').style.display = 'flex';
+  document.getElementById('urlImportInput').value = '';
+  document.getElementById('urlImportStatus').textContent = '';
+  setTimeout(() => document.getElementById('urlImportInput').focus(), 100);
+  document.getElementById('urlImportInput').onkeydown = e => { if(e.key==='Enter') runUrlImport(); };
+}
+
+function closeUrlImport() {
+  document.getElementById('urlImportModal').style.display = 'none';
+}
+
+async function runUrlImport() {
+  const url = document.getElementById('urlImportInput').value.trim();
+  if(!url) { showToast('Bitte eine URL eingeben'); return; }
+
+  const status = document.getElementById('urlImportStatus');
+  const btn = document.getElementById('urlImportBtn');
+  status.style.color = '#7a9080';
+  status.textContent = '⏳ Kader wird geladen…';
+  btn.disabled = true;
+
+  try {
+    const apiUrl = '/api/squad?url=' + encodeURIComponent(url);
+    const res = await fetch(apiUrl);
+    const data = await res.json();
+
+    if(!res.ok || data.error) {
+      status.style.color = '#e05252';
+      status.textContent = '❌ ' + (data.error || 'Fehler beim Laden');
+      btn.disabled = false;
+      return;
+    }
+
+    status.style.color = '#27ae60';
+    status.textContent = `✓ ${data.count} Spieler gefunden: ${data.team}`;
+    btn.disabled = false;
+
+    // Auto-import after short delay
+    setTimeout(() => {
+      closeUrlImport();
+      showPrompt('Kadername', data.team, name => {
+        const imported = data.players.map(p => ({id: nextRid++, num: p.num, name: p.name, pos: p.pos}));
+        roster = imported;
+        saveCurrentRosterWithName(name);
+        renderRoster();
+        updateRosterSelect();
+        showToast('✓ ' + imported.length + ' Spieler importiert: ' + name);
+      });
+    }, 800);
+
+  } catch(e) {
+    status.style.color = '#e05252';
+    status.textContent = '❌ Verbindungsfehler: ' + e.message;
+    btn.disabled = false;
+  }
+}
+
 function triggerCSV() { document.getElementById('csvFile').click(); }
 function importCSV(event) {
   const file = event.target.files[0];
