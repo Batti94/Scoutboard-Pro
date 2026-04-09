@@ -108,7 +108,7 @@ textarea{resize:vertical;min-height:70px;}
 .player.subbed-out{filter:grayscale(0.3);}
 .sub-player:hover .spdot{transform:scale(1.1);}
 .sub-player.sel .spdot{box-shadow:0 0 0 2px var(--acc);}
-.spdot{width:28px;height:28px;border-radius:50%;background:var(--wh);border:2px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:.8rem;color:var(--gd);box-shadow:0 2px 6px rgba(0,0,0,.4);transition:all .15s;position:relative;}
+.spdot{width:clamp(32px,5vw,44px);height:clamp(32px,5vw,44px);border-radius:50%;background:var(--wh);border:2.5px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:clamp(.85rem,1.4vw,1.1rem);color:var(--gd);box-shadow:0 3px 10px rgba(0,0,0,.45);transition:all .15s;position:relative;}
 .spname{font-size:.55rem;font-weight:600;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap;max-width:52px;overflow:hidden;text-overflow:ellipsis;text-align:center;margin-top:2px;}
 .sub-icon{position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;background:#27ae60;border-radius:50%;border:1px solid rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:.5rem;color:#fff;font-weight:700;}
 
@@ -697,11 +697,12 @@ let nextLid = 1;
 let curLineupId = null; // id of currently loaded lineup
 let nextSrid = 1;
 
-// Start / End lineup toggle
-let curView = 'start'; // 'start' | 'end'
+// Start / End / Combined lineup toggle
+let curView = 'start'; // 'start' | 'end' | 'combined'
 let snapshots = {
-  start: null,  // {formation, players, subs, arrows}
+  start: null,    // {formation, players, subs, arrows}
   end:   null,
+  combined: null, // own editable snapshot for Gesamt view
 };
 
 // Arrow state
@@ -942,11 +943,30 @@ function applySnapshot(snap) {
 function switchLineupView(view) {
   // Save current non-combined state before leaving
   if(curView !== 'combined') snapshots[curView] = getSnapshot();
+  // Save combined state if leaving combined
+  if(curView === 'combined' && snapshots.combined) {
+    snapshots.combined = {
+      formation: curFormation,
+      players: JSON.parse(JSON.stringify(getActivePlayers())),
+      subs: snapshots.combined.subs,
+      arrows: [],
+    };
+  }
 
   curView = view;
 
   if(view === 'combined') {
-    // Don't change players/subs/arrows — just re-render in combined mode
+    // Initialize combined snapshot as deep copy of start players + end subs
+    if(!snapshots.combined) {
+      const startPlayers = snapshots.start ? JSON.parse(JSON.stringify(snapshots.start.players)) : JSON.parse(JSON.stringify(players));
+      const endSubs = snapshots.end ? JSON.parse(JSON.stringify(snapshots.end.subs)) : JSON.parse(JSON.stringify(subs));
+      snapshots.combined = {
+        formation: snapshots.start ? snapshots.start.formation : curFormation,
+        players: startPlayers,
+        subs: endSubs,
+        arrows: [],
+      };
+    }
     renderAll();
   } else {
     // Load snapshot or initialize
@@ -1073,11 +1093,11 @@ function renderPitch() {
   let renderPlayers, renderSubs_, renderArrows_;
 
   if(curView === 'combined') {
-    // Combined: use LIVE start snapshot players (so edits work)
-    // and end subs/arrows
-    renderPlayers = snapshots.start ? snapshots.start.players : players;
-    renderSubs_ = snapshots.end ? snapshots.end.subs : subs;
-    renderArrows_ = snapshots.end ? snapshots.end.arrows : arrows;
+    // Combined: use own combined snapshot (separate from start)
+    const combinedSnap = snapshots.combined;
+    renderPlayers = combinedSnap ? combinedSnap.players : (snapshots.start ? JSON.parse(JSON.stringify(snapshots.start.players)) : players);
+    renderSubs_ = combinedSnap ? combinedSnap.subs : (snapshots.end ? snapshots.end.subs : subs);
+    renderArrows_ = []; // no arrows in combined
   } else if(curView === 'end') {
     // End view: hide subbed-out players entirely, show subs on their end positions
     renderPlayers = players.filter(p => !subs.find(s=>s.subForId===p.id && s.onField));
@@ -1376,7 +1396,7 @@ function addRosterToBench(r) {
     id: nextSubId++,
     num: r.num||'?',
     name: r.name||'',
-    color: KIT_COLORS[0],
+    color: getCurKitColor(),
     goals:0, assists:0, yellow:0, red:0,
     subForId: null, onField: false, fieldX: null, fieldY: null
   });
@@ -1385,8 +1405,19 @@ function addRosterToBench(r) {
   showToast(r.name+' → Auswechselbank');
 }
 
+function getCurKitColor() {
+  // Return the color currently used by outfield players
+  const outfield = players.find(p => !p.isGK && p.color);
+  if(outfield) return outfield.color;
+  if(snapshots.start) {
+    const p = snapshots.start.players.find(p => !p.isGK && p.color);
+    if(p) return p.color;
+  }
+  return KIT_COLORS[0];
+}
+
 function addSubSlot() {
-  subs.push({id:nextSubId++, num:'', name:'', color:KIT_COLORS[0], goals:0, assists:0, yellow:0, red:0, subForId:null});
+  subs.push({id:nextSubId++, num:'', name:'', color:getCurKitColor(), goals:0, assists:0, yellow:0, red:0, subForId:null});
   renderSubs();
 }
 
@@ -1926,8 +1957,8 @@ let selArrowIdx = null;
 let dragOverBench = false;
 
 function getActivePlayers() {
-  // Returns the live player array for the current view
-  if(curView === 'combined' && snapshots.start) return snapshots.start.players;
+  if(curView === 'combined' && snapshots.combined) return snapshots.combined.players;
+  if(curView === 'combined' && snapshots.start) return snapshots.start.players; // fallback
   return players;
 }
 
@@ -2029,7 +2060,7 @@ function dropPlayerToBench(pid, startPos) {
     id: nextSubId++,
     num: p.num||'',
     name: p.name||'',
-    color: p.color||KIT_COLORS[0],
+    color: p.color || getCurKitColor(),
     goals:0, assists:0, yellow:0, red:0,
     subForId: null, onField: false, fieldX: null, fieldY: null
   });
@@ -2226,7 +2257,7 @@ function resetLineup() {
     });
     subs = [];
     arrows = [];
-    snapshots = { start: null, end: null };
+    snapshots = { start: null, end: null, combined: null };
     curView = 'start';
     curLineupId = null;
     // Reset toggle buttons
@@ -2242,15 +2273,13 @@ function resetLineup() {
 }
 
 function drawSubLines() {
-  if(curView !== 'combined') return; // only in Gesamt
+  if(curView !== 'combined') return;
   const cv = document.getElementById('arrowCanvas');
   const ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
-  // Use end snapshot subs for combined view
-  const endSnap = snapshots.end;
-  const subsToLine = endSnap ? endSnap.subs : subs;
-  const startSnap = snapshots.start;
-  const playersRef = startSnap ? startSnap.players : players;
+  const combinedSnap = snapshots.combined;
+  const subsToLine = combinedSnap ? combinedSnap.subs : (snapshots.end ? snapshots.end.subs : subs);
+  const playersRef = combinedSnap ? combinedSnap.players : (snapshots.start ? snapshots.start.players : players);
   subsToLine.filter(s=>s.onField && s.subForId!=null).forEach(s => {
     const p = playersRef.find(x=>x.id===s.subForId);
     if(!p || s.fieldX==null) return;
