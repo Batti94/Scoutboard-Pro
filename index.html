@@ -297,7 +297,6 @@ textarea{resize:vertical;min-height:70px;}
   <button class="hbtn" onclick="resetLineup()">↺ Reset</button>
   <button class="hbtn" onclick="triggerCSV()">📋 CSV</button>
   <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="importCSV(event)">
-  <button class="hbtn acc" onclick="openUrlImport()">🔗 Kader importieren</button>
   <button class="hbtn" onclick="saveLineup()">💾 Speichern</button>
   <button class="hbtn" onclick="openExportModal()">📷 Export</button>
 </header>
@@ -489,23 +488,6 @@ textarea{resize:vertical;min-height:70px;}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-<!-- URL IMPORT MODAL -->
-<div id="urlImportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;">
-  <div style="background:var(--gd);border:1px solid var(--pb);border-radius:14px;padding:24px;max-width:460px;width:92%;display:flex;flex-direction:column;gap:14px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.08em;color:var(--acc);">🔗 Kader von Transfermarkt importieren</div>
-    <div style="font-size:.78rem;color:var(--gr);line-height:1.6;">
-      Kopiere die URL der Transfermarkt-Vereinsseite und füge sie hier ein.<br>
-      <span style="color:var(--wh);">z.B.: transfermarkt.de/first-vienna-fc/startseite/verein/2364</span>
-    </div>
-    <input type="text" id="urlImportInput" placeholder="https://www.transfermarkt.de/..." style="width:100%;font-size:.85rem;padding:10px 12px;">
-    <div id="urlImportStatus" style="font-size:.78rem;min-height:20px;"></div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn sec" style="flex:1;" onclick="closeUrlImport()">Abbrechen</button>
-      <button class="btn" style="flex:1;" id="urlImportBtn" onclick="runUrlImport()">🔍 Kader laden</button>
-    </div>
-  </div>
-</div>
 
 <!-- EXPORT MODAL -->
 <div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;">
