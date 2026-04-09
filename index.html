@@ -779,7 +779,42 @@ function init() {
 
 function checkUrlImport() {
   try {
+    // Check localStorage import (from bookmarklet via import.html)
     const params = new URLSearchParams(window.location.search);
+    const fromImport = params.get('fromImport');
+    if(fromImport) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      const raw = localStorage.getItem('sb_import_ready');
+      if(raw) {
+        const data = JSON.parse(raw);
+        localStorage.removeItem('sb_import_ready');
+        localStorage.removeItem('sb_import');
+        if(data.players && data.players.length) {
+          setTimeout(() => {
+            showConfirmCustom(
+              'Kader importieren',
+              '"'+data.team+'" — '+data.players.length+' Spieler. Ersetzen oder hinzufügen?',
+              'Ersetzen', 'Hinzufügen',
+              () => {
+                roster = data.players.map(p=>({id:nextRid++, num:p.num, name:p.name, pos:p.pos}));
+                saveCurrentRosterWithName(data.team);
+                renderRoster(); updateRosterSelect();
+                showToast('✓ Kader importiert: '+data.team);
+              },
+              () => {
+                const add = data.players.map(p=>({id:nextRid++, num:p.num, name:p.name, pos:p.pos}));
+                roster = [...roster, ...add];
+                renderRoster(); updateRosterSelect();
+                showToast('✓ '+add.length+' Spieler hinzugefügt');
+              }
+            );
+          }, 300);
+          return;
+        }
+      }
+    }
+
+    // Check URL parameter import (legacy)
     const raw = params.get('import');
     if(!raw) return;
     const data = JSON.parse(decodeURIComponent(raw));
