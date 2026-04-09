@@ -297,6 +297,9 @@ textarea{resize:vertical;min-height:70px;}
   <button class="hbtn" onclick="undo()">↩ Undo</button>
   <button class="hbtn" onclick="resetLineup()">↺ Reset</button>
   <button class="hbtn" onclick="saveLineup()">💾 Speichern</button>
+  <button class="hbtn sec" onclick="exportBackup()" title="Alle Daten sichern">⬇ Backup</button>
+  <button class="hbtn sec" onclick="triggerRestore()" title="Backup wiederherstellen">⬆ Restore</button>
+  <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="importBackup(event)">
 </header>
 
 <!-- LINEUP VIEW -->
@@ -3031,6 +3034,58 @@ async function switchLineupViewSilent(view) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ===================================================
+// BACKUP / RESTORE
+// ===================================================
+function exportBackup() {
+  saveNow();
+  const data = localStorage.getItem('sbpro_v5');
+  if(!data) { showToast('Keine Daten zum Sichern'); return; }
+  const blob = new Blob([data], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0,10);
+  const link = document.createElement('a');
+  link.download = `scoutboard_backup_${date}.json`;
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast('✓ Backup gespeichert');
+}
+
+function triggerRestore() {
+  document.getElementById('restoreFile').click();
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!data.savedLineups && !data.savedRosters) {
+        showToast('❌ Ungültige Backup-Datei'); return;
+      }
+      showConfirmCustom(
+        'Backup wiederherstellen',
+        `Backup enthält ${data.savedLineups?.length||0} Aufstellungen und ${data.savedRosters?.length||0} Kader. Aktuelle Daten überschreiben?`,
+        'Wiederherstellen', 'Abbrechen',
+        () => {
+          localStorage.setItem('sbpro_v5', JSON.stringify(data));
+          location.reload();
+        },
+        () => {}
+      );
+    } catch(e) {
+      showToast('❌ Fehler beim Lesen der Datei');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
 
 function printLineup() {
   openExportModal();
