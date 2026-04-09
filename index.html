@@ -2822,10 +2822,17 @@ async function runExport() {
       const H = pitchOuter.offsetHeight;
       const SCALE = 2;
 
-      // Step 1: capture pitchOuter (includes padding for edge player names)
+      // Hide surrounding UI elements to prevent bleed
+      const pitchCenter = document.querySelector('.pitch-center');
+      const prevCenterBg = pitchCenter ? pitchCenter.style.background : '';
+      if(pitchCenter) pitchCenter.style.background = '#0d1f13';
+
+      // Step 1: capture pitchOuter with forced dark background
       arrowCv.style.visibility = 'hidden';
       const prevOverflow = pitchEl.style.overflow;
+      const prevOuterBg = pitchOuter.style.background;
       pitchEl.style.overflow = 'hidden';
+      pitchOuter.style.background = '#0d1f13';
       const pitchCapture = await html2canvas(pitchOuter, {
         backgroundColor: '#0c1e12',
         scale: SCALE,
@@ -2843,6 +2850,8 @@ async function runExport() {
       });
       arrowCv.style.visibility = '';
       pitchEl.style.overflow = prevOverflow;
+      pitchOuter.style.background = prevOuterBg;
+      if(pitchCenter) pitchCenter.style.background = prevCenterBg;
 
       // Step 2: create final canvas
       const final = document.createElement('canvas');
@@ -2889,14 +2898,20 @@ async function runExport() {
 
   progress.textContent = 'Erstelle Bild…';
 
-  // Compose all canvases side by side on one final canvas
-  const PAD = 24;        // padding around each pitch
-  const LABEL_H = 36;    // height for label above each pitch
-  const GAP = 16;        // gap between pitches
+  const SCALE = 2;
   const cW = canvases[0].canvas.width;
   const cH = canvases[0].canvas.height;
-  const totalW = canvases.length * cW + (canvases.length - 1) * GAP * 2 + PAD * 2;
-  const totalH = cH + LABEL_H + PAD * 2 + 60; // +60 for top header
+  const n = canvases.length;
+
+  // Layout constants (all in canvas pixels, already @2x)
+  const OUTER_PAD = 40 * SCALE;   // outer padding
+  const GAP = 24 * SCALE;          // gap between pitches
+  const HEADER_H = 70 * SCALE;     // top header height
+  const LABEL_H = 32 * SCALE;      // label above each pitch
+  const INNER_PAD = 12 * SCALE;    // pitch inner padding
+
+  const totalW = OUTER_PAD * 2 + n * cW + (n - 1) * GAP;
+  const totalH = OUTER_PAD * 2 + HEADER_H + LABEL_H + cH;
 
   const final = document.createElement('canvas');
   final.width = totalW;
@@ -2904,36 +2919,54 @@ async function runExport() {
   const ctx = final.getContext('2d');
 
   // Background
-  ctx.fillStyle = '#0c1e12';
+  ctx.fillStyle = '#0d1f13';
   ctx.fillRect(0, 0, totalW, totalH);
 
-  // Top header: team + match info
+  // Subtle top border accent
+  ctx.fillStyle = '#e8c84a';
+  ctx.fillRect(0, 0, totalW, 4 * SCALE);
+
+  // Team name
   const teamName = document.getElementById('dTeam').textContent;
   const matchInfo = document.getElementById('dMatch').textContent;
-  ctx.fillStyle = '#f0f0eb';
-  ctx.font = `bold ${Math.round(cW * 0.04)}px "Helvetica Neue", Arial, sans-serif`;
+
   ctx.textAlign = 'center';
-  ctx.fillText(teamName, totalW/2, PAD + 28);
-  ctx.fillStyle = '#7a9080';
-  ctx.font = `${Math.round(cW * 0.025)}px "Helvetica Neue", Arial, sans-serif`;
-  ctx.fillText(matchInfo, totalW/2, PAD + 50);
+  ctx.fillStyle = '#f0f0eb';
+  ctx.font = `bold ${28 * SCALE}px "Helvetica Neue", Arial, sans-serif`;
+  ctx.fillText(teamName, totalW / 2, OUTER_PAD + 30 * SCALE);
 
-  // Draw each pitch with label
+  if(matchInfo && matchInfo !== '–') {
+    ctx.fillStyle = '#7a9080';
+    ctx.font = `${14 * SCALE}px "Helvetica Neue", Arial, sans-serif`;
+    ctx.fillText(matchInfo, totalW / 2, OUTER_PAD + 52 * SCALE);
+  }
+
+  // Draw each pitch
   canvases.forEach(({canvas, label}, i) => {
-    const x = PAD + i * (cW + GAP * 2);
-    const y = PAD + 60;
+    const x = OUTER_PAD + i * (cW + GAP);
+    const y = OUTER_PAD + HEADER_H;
 
-    // Label
+    // Label background pill
+    const labelText = label.toUpperCase();
+    ctx.font = `bold ${13 * SCALE}px "Helvetica Neue", Arial, sans-serif`;
+    const labelW = ctx.measureText(labelText).width + 20 * SCALE;
+    const labelX = x + cW / 2 - labelW / 2;
+    const labelY = y + 4 * SCALE;
+
+    ctx.fillStyle = 'rgba(232,200,74,.15)';
+    ctx.beginPath();
+    ctx.roundRect(labelX, labelY, labelW, 22 * SCALE, 11 * SCALE);
+    ctx.fill();
+
     ctx.fillStyle = '#e8c84a';
-    ctx.font = `bold ${Math.round(cW * 0.03)}px "Helvetica Neue", Arial, sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(label.toUpperCase(), x + cW/2, y + LABEL_H - 8);
+    ctx.fillText(labelText, x + cW / 2, labelY + 16 * SCALE);
 
-    // Pitch canvas
+    // Pitch
     ctx.drawImage(canvas, x, y + LABEL_H);
   });
 
-  // Download / open in tab
+  // Generate filename
   const team = (document.getElementById('iTeam').value||'Team').replace(/\s+/g,'_');
   const date = (document.getElementById('iDate').value||'').replace(/\./g,'-');
   const viewLabels = views.map(v=>v.label).join('_');
@@ -2948,16 +2981,20 @@ async function runExport() {
   link.click();
   document.body.removeChild(link);
 
-  // Fallback: open in new tab
+  // Open in new tab (clean — no hint text in image)
   const tab = window.open();
   if(tab) {
     tab.document.write(`
-      <html><head><title>${filename}</title></head>
-      <body style="margin:0;background:#0c1e12;display:flex;flex-direction:column;align-items:center;padding:20px;gap:12px;">
-        <div style="color:#e8c84a;font-family:sans-serif;font-size:14px;text-align:center;">
-          Rechtsklick → "Bild speichern unter" → <strong>${filename}</strong>
-        </div>
-        <img src="${dataUrl}" style="max-width:100%;border-radius:8px;">
+      <html>
+      <head><title>${filename}</title>
+      <style>body{margin:0;background:#0d1f13;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;}
+      .hint{color:#7a9080;font-family:sans-serif;font-size:13px;text-align:center;}
+      .hint strong{color:#e8c84a;}
+      img{max-width:100%;border-radius:4px;}</style>
+      </head>
+      <body>
+        <div class="hint">Rechtsklick auf das Bild → „Bild speichern unter" → <strong>${filename}</strong></div>
+        <img src="${dataUrl}">
       </body></html>
     `);
     tab.document.close();
