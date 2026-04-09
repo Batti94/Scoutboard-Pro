@@ -407,6 +407,13 @@ textarea{resize:vertical;min-height:70px;}
         </select>
         <button class="btn" style="padding:4px 8px;font-size:.72rem;" onclick="saveCurrentRoster()">💾</button>
       </div>
+      <!-- import hint banner -->
+      <div id="importHint" style="background:rgba(232,200,74,.07);border:1px solid rgba(232,200,74,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:.76rem;color:#b0c0a0;line-height:1.6;display:none;">
+        <div style="font-weight:700;color:#e8c84a;margin-bottom:4px;">⚽ Kader importieren</div>
+        Importiere Kader direkt von Transfermarkt mit dem Bookmarklet.<br>
+        <a href="/bookmarklet" target="_blank" style="color:#e8c84a;font-weight:700;text-decoration:none;">→ Einrichtung & Anleitung</a>
+        <span style="float:right;cursor:pointer;color:#7a9080;" onclick="document.getElementById('importHint').style.display='none';localStorage.setItem('sb_hint_dismissed','1');">✕</span>
+      </div>
       <div id="rosterList" style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px;"></div>
       <div class="add-form">
         <label class="lbl">Spieler hinzufügen</label>
@@ -754,6 +761,11 @@ function init() {
   renderAll();
   updateRosterSelect();
   switchLineupView(curView);
+  // Show import hint if no rosters yet and not dismissed
+  const hint = document.getElementById('importHint');
+  if(hint && !localStorage.getItem('sb_hint_dismissed') && savedRosters.length === 0) {
+    hint.style.display = 'block';
+  }
   window.addEventListener('resize', () => { renderPitch(); redrawArrows(); });
   document.addEventListener('keydown', e => { if(e.key==='Escape') { closeEdit(); closeMobSheet(); }});
   checkUrlImport();
