@@ -79,9 +79,8 @@ const bm = `javascript:(function(){
   var teamEl=document.querySelector('h1.data-header__headline-wrapper--oswald span:last-child')||document.querySelector('.data-header__headline-wrapper');
   var team=teamEl?teamEl.textContent.trim().replace(/\\s+/g,' '):'Unbekannt';
   var payload=JSON.stringify({team:team,players:players,ts:Date.now()});
-  localStorage.setItem('sb_import',payload);
-  var w=window.open('${BASE}/import','sb_import');
-  if(!w)alert('Popup blockiert! Bitte Popups für diese Seite erlauben.');
+  localStorage.setItem('sb_import_ready',payload);
+  window.open('https://scoutboard-pro.vercel.app/?fromImport=1','_blank');
 })();`;
 
 document.getElementById('bmLink').href = bm;
