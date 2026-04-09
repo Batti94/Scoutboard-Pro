@@ -49,7 +49,7 @@ header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var
 #viewLineup{flex-direction:row;overflow:hidden;}
 
 /* LEFT SIDEBAR */
-.lsb{width:230px;min-width:200px;background:var(--gd);border-right:1px solid var(--pb);display:flex;flex-direction:column;overflow-y:auto;padding:14px;gap:14px;flex-shrink:0;}
+.lsb{width:200px;min-width:180px;background:var(--gd);border-right:1px solid var(--pb);display:flex;flex-direction:column;overflow-y:auto;padding:10px;gap:10px;flex-shrink:0;}
 .sb-sec h3{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.1em;color:var(--gr);margin-bottom:8px;}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
 .fbtn{background:rgba(255,255,255,.05);border:1px solid var(--pb);color:var(--wh);padding:7px 4px;border-radius:5px;font-size:.8rem;font-weight:500;cursor:pointer;transition:all .18s;text-align:center;}
@@ -65,12 +65,12 @@ textarea{resize:vertical;min-height:70px;}
 .row2 input{flex:1;}
 
 /* PITCH CENTER */
-.pitch-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:12px 16px;overflow-y:auto;overflow-x:hidden;background:var(--panel);}
-.pitch-header{text-align:center;margin-bottom:8px;}
+.pitch-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:8px 8px;overflow-y:auto;overflow-x:hidden;background:var(--panel);}
+.pitch-header{text-align:center;margin-bottom:6px;}
 .pitch-header .team-name{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.1em;}
 .pitch-header .match-info{font-size:.73rem;color:var(--gr);margin-top:2px;}
-.pitch-wrap{position:relative;width:100%;max-width:520px;}
-.pitch-outer{position:relative;padding:28px 36px;background:var(--panel);border-radius:10px;}
+.pitch-wrap{position:relative;width:100%;max-width:600px;}
+.pitch-outer{position:relative;padding:24px 32px;background:var(--panel);border-radius:10px;}
 @media(max-width:700px){.lsb,.rsb{display:none;}.pitch-wrap{max-width:100%;}.pitch-outer{padding:22px 28px;}}
 
 .pitch{width:100%;aspect-ratio:380/560;background:var(--gf);border-radius:7px;position:relative;overflow:visible;box-shadow:0 16px 50px rgba(0,0,0,.6),inset 0 0 0 2.5px rgba(255,255,255,.14);}
@@ -113,7 +113,7 @@ textarea{resize:vertical;min-height:70px;}
 .sub-icon{position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;background:#27ae60;border-radius:50%;border:1px solid rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:.5rem;color:#fff;font-weight:700;}
 
 /* RIGHT SIDEBAR */
-.rsb{width:210px;min-width:180px;background:var(--gd);border-left:1px solid var(--pb);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+.rsb{width:200px;min-width:180px;background:var(--gd);border-left:1px solid var(--pb);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
 .rsb-tabs{display:flex;border-bottom:1px solid var(--pb);}
 .rsbt{flex:1;padding:9px 4px;text-align:center;font-size:.75rem;font-weight:500;cursor:pointer;color:var(--gr);transition:all .18s;}
 .rsbt.active{color:var(--acc);border-bottom:2px solid var(--acc);}
@@ -293,12 +293,10 @@ textarea{resize:vertical;min-height:70px;}
     <div class="tab" onclick="showView('saved')">Archiv</div>
   </div>
   <div class="hsep"></div>
+  <button class="hbtn" onclick="newLineup()">+ Neu</button>
   <button class="hbtn" onclick="undo()">↩ Undo</button>
   <button class="hbtn" onclick="resetLineup()">↺ Reset</button>
-  <button class="hbtn" onclick="triggerCSV()">📋 CSV</button>
-  <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="importCSV(event)">
   <button class="hbtn" onclick="saveLineup()">💾 Speichern</button>
-  <button class="hbtn" onclick="openExportModal()">📷 Export</button>
 </header>
 
 <!-- LINEUP VIEW -->
@@ -336,7 +334,7 @@ textarea{resize:vertical;min-height:70px;}
     <div class="pitch-header">
       <div class="team-name" id="dTeam">Mein Team</div>
       <div class="match-info" id="dMatch">–</div>
-      <div style="display:flex;justify-content:center;margin-top:8px;">
+      <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:8px;">
         <div style="display:flex;background:rgba(0,0,0,.35);border-radius:20px;padding:3px;gap:2px;">
           <button id="btnStart" onclick="switchLineupView('start')"
             style="padding:4px 14px;border-radius:16px;border:none;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .18s;background:var(--acc);color:var(--gd);">
@@ -351,6 +349,10 @@ textarea{resize:vertical;min-height:70px;}
             Gesamt
           </button>
         </div>
+        <button onclick="openExportModal()" title="Export als PNG"
+          style="background:rgba(0,0,0,.35);border:none;border-radius:50%;width:30px;height:30px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .18s;"
+          onmouseenter="this.style.background='rgba(232,200,74,.25)'"
+          onmouseleave="this.style.background='rgba(0,0,0,.35)'">📷</button>
       </div>
     </div>
     <div class="pitch-wrap" id="pitchWrap">
@@ -394,45 +396,47 @@ textarea{resize:vertical;min-height:70px;}
 
   <!-- RIGHT -->
   <div class="rsb">
-    <div class="rsb-tabs">
-      <div class="rsbt active" onclick="switchRsb('roster')" id="rsbt-roster">Kader</div>
-      <div class="rsbt" onclick="switchRsb('rosters')" id="rsbt-rosters">Kader 💾</div>
-      <div class="rsbt" onclick="switchRsb('lineups')" id="rsbt-lineups">Aufst.</div>
-    </div>
-    <div class="rsb-content" id="rsbRoster">
-      <!-- active roster selector -->
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--pb);">
-        <select id="rosterSelect" style="flex:1;font-size:.75rem;" onchange="loadSavedRoster(this.value)">
+    <!-- Kader Dropdown -->
+    <div style="padding:10px;border-bottom:1px solid var(--pb);">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <select id="rosterSelect" style="flex:1;font-size:.78rem;" onchange="loadSavedRoster(this.value)">
           <option value="">– Kein Kader –</option>
         </select>
-        <button class="btn" style="padding:4px 8px;font-size:.72rem;" onclick="saveCurrentRoster()">💾</button>
+        <button class="btn" style="padding:4px 8px;font-size:.72rem;" title="Kader speichern" onclick="saveCurrentRoster()">💾</button>
+        <button class="btn del" style="padding:4px 8px;font-size:.72rem;" title="Kader löschen" onclick="deleteCurrentRoster()">🗑</button>
       </div>
-      <!-- import hint banner -->
-      <div id="importHint" style="background:rgba(232,200,74,.07);border:1px solid rgba(232,200,74,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:.76rem;color:#b0c0a0;line-height:1.6;display:none;">
-        <div style="font-weight:700;color:#e8c84a;margin-bottom:4px;">⚽ Kader importieren</div>
-        Importiere Kader direkt von Transfermarkt mit dem Bookmarklet.<br>
-        <a href="/bookmarklet" target="_blank" style="color:#e8c84a;font-weight:700;text-decoration:none;">→ Einrichtung & Anleitung</a>
-        <span style="float:right;cursor:pointer;color:#7a9080;" onclick="document.getElementById('importHint').style.display='none';localStorage.setItem('sb_hint_dismissed','1');">✕</span>
+      <div style="display:flex;gap:5px;margin-top:6px;">
+        <button class="btn sec" style="flex:1;font-size:.85rem;padding:4px 0;" onclick="triggerCSV()" title="CSV Import">📋</button>
+        <button class="btn sec" style="flex:1;font-size:.85rem;padding:4px 0;" onclick="clearRoster()" title="Kader leeren">✕</button>
       </div>
-      <div id="rosterList" style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px;"></div>
-      <div class="add-form">
-        <label class="lbl">Spieler hinzufügen</label>
-        <div class="row2"><input type="text" id="nNum" placeholder="#" style="width:44px;flex:none;"><input type="text" id="nPos" placeholder="Pos" style="width:48px;flex:none;"><input type="text" id="nName" placeholder="Name" style="flex:1;"></div>
-        <button class="btn" style="width:100%" onclick="addRoster()">+ Hinzufügen</button>
-        <button class="btn sec" style="width:100%;font-size:.75rem;" onclick="clearRoster()">Kader leeren</button>
-      </div>
+      <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="importCSV(event)">
     </div>
-    <div class="rsb-content" id="rsbRosters" style="display:none;">
-      <div id="savedRosterList" style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;"></div>
-      <div style="padding-top:10px;border-top:1px solid var(--pb);">
-        <button class="btn" style="width:100%;margin-bottom:6px;" onclick="saveCurrentRoster()">💾 Aktuellen Kader speichern</button>
-        <button class="btn sec" style="width:100%;font-size:.75rem;" onclick="triggerCSV()">📋 CSV Import</button>
-      </div>
+    <!-- import hint banner -->
+    <div id="importHint" style="background:rgba(232,200,74,.07);border-bottom:1px solid rgba(232,200,74,.2);padding:8px 10px;font-size:.74rem;color:#b0c0a0;line-height:1.6;display:none;">
+      <div style="font-weight:700;color:#e8c84a;margin-bottom:2px;">⚽ Kader importieren</div>
+      <a href="/bookmarklet" target="_blank" style="color:#e8c84a;font-weight:700;text-decoration:none;">→ Bookmarklet einrichten</a>
+      <span style="float:right;cursor:pointer;color:#7a9080;" onclick="document.getElementById('importHint').style.display='none';localStorage.setItem('sb_hint_dismissed','1');">✕</span>
     </div>
-    <div class="rsb-content" id="rsbLineups" style="display:none;">
-      <div id="lineupList" style="display:flex;flex-direction:column;gap:4px;"></div>
-      <div style="padding-top:10px;border-top:1px solid var(--pb);margin-top:6px;">
-        <button class="btn" style="width:100%" onclick="saveLineup()">💾 Aktuelle speichern</button>
+    <!-- Spielerliste -->
+    <div id="rosterList" style="flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:3px;"></div>
+    <!-- Spieler hinzufügen -->
+    <div style="padding:8px 10px;border-top:1px solid var(--pb);">
+      <div style="font-size:.7rem;color:var(--gr);font-weight:600;margin-bottom:5px;">SPIELER HINZUFÜGEN</div>
+      <div class="row2" style="margin-bottom:5px;">
+        <input type="text" id="nNum" placeholder="#" style="width:36px;flex:none;font-size:.78rem;">
+        <input type="text" id="nPos" placeholder="Pos" style="width:40px;flex:none;font-size:.78rem;">
+        <input type="text" id="nName" placeholder="Name" style="flex:1;font-size:.78rem;">
+      </div>
+      <button class="btn" style="width:100%;font-size:.78rem;" onclick="addRoster()">+ Hinzufügen</button>
+    </div>
+    <!-- Gespeicherte Aufstellungen -->
+    <div style="border-top:1px solid var(--pb);">
+      <div style="padding:6px 10px;font-size:.7rem;color:var(--gr);font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleLineupPanel()">
+        GESPEICHERTE AUFSTELLUNGEN
+        <span id="lineupPanelArrow">▲</span>
+      </div>
+      <div id="lineupPanel" style="padding:0 10px 10px;">
+        <div id="lineupList" style="display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;"></div>
       </div>
     </div>
   </div>
@@ -446,8 +450,17 @@ textarea{resize:vertical;min-height:70px;}
 
 <!-- SAVED VIEW -->
 <div class="view" id="viewSaved">
-  <div class="stats-header">Gespeicherte Aufstellungen</div>
-  <div id="savedContent"></div>
+  <div class="stats-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Archiv</span>
+  </div>
+  <div style="display:flex;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--pb);padding-bottom:12px;">
+    <button id="archiveBtnLineups" class="btn" style="font-size:.8rem;" onclick="switchArchive('lineups')">📋 Aufstellungen</button>
+    <button id="archiveBtnRosters" class="btn sec" style="font-size:.8rem;" onclick="switchArchive('rosters')">👥 Kader</button>
+  </div>
+  <div id="archiveLineups"><div id="savedContent"></div></div>
+  <div id="archiveRosters" style="display:none;">
+    <div id="savedRostersContent"></div>
+  </div>
 </div>
 
 <!-- EDIT PANEL -->
@@ -656,27 +669,27 @@ textarea{resize:vertical;min-height:70px;}
 // ===================================================
 const FORMATIONS = {
   // ── 3er Kette ──
-  '3-4-3':   { rows: [1,3,4,3],   ys: [.88,.65,.42,.18] },
-  '3-4-2-1': { rows: [1,3,4,2,1], ys: [.88,.67,.47,.28,.12] },
-  '3-5-2':   { rows: [1,3,5,2],   ys: [.88,.65,.40,.18] },
-  '3-5-1-1': { rows: [1,3,5,1,1], ys: [.88,.67,.45,.27,.12] },
-  '3-6-1':   { rows: [1,3,6,1],   ys: [.88,.64,.38,.14] },
+  '3-4-3':   { rows: [1,3,4,3],   ys: [.92,.76,.58,.40] },
+  '3-4-2-1': { rows: [1,3,4,2,1], ys: [.92,.76,.58,.42,.28] },
+  '3-5-2':   { rows: [1,3,5,2],   ys: [.92,.76,.56,.38] },
+  '3-5-1-1': { rows: [1,3,5,1,1], ys: [.92,.76,.56,.40,.26] },
+  '3-6-1':   { rows: [1,3,6,1],   ys: [.92,.76,.54,.36] },
   // ── 4er Kette ──
-  '4-2-3-1': { rows: [1,4,2,3,1], ys: [.88,.68,.52,.32,.14] },
-  '4-3-3':   { rows: [1,4,3,3],   ys: [.88,.65,.42,.18] },
-  '4-4-2':   { rows: [1,4,4,2],   ys: [.88,.65,.40,.18] },
-  '4-4-2 (R)':{ rows: [1,4,2,2,2],ys: [.88,.67,.50,.32,.14] },
-  '4-3-2-1': { rows: [1,4,3,2,1], ys: [.88,.67,.48,.30,.13] },
-  '4-5-1':   { rows: [1,4,5,1],   ys: [.88,.64,.38,.14] },
-  '4-1-4-1': { rows: [1,4,1,4,1], ys: [.88,.68,.52,.32,.14] },
-  '4-1-3-2': { rows: [1,4,1,3,2], ys: [.88,.68,.52,.32,.14] },
-  '4-2-4':   { rows: [1,4,2,4],   ys: [.88,.65,.44,.18] },
+  '4-2-3-1': { rows: [1,4,2,3,1], ys: [.92,.76,.62,.46,.30] },
+  '4-3-3':   { rows: [1,4,3,3],   ys: [.92,.76,.56,.38] },
+  '4-4-2':   { rows: [1,4,4,2],   ys: [.92,.76,.54,.36] },
+  '4-4-2 (R)':{ rows: [1,4,2,2,2],ys: [.92,.76,.60,.46,.30] },
+  '4-3-2-1': { rows: [1,4,3,2,1], ys: [.92,.76,.58,.42,.28] },
+  '4-5-1':   { rows: [1,4,5,1],   ys: [.92,.76,.52,.34] },
+  '4-1-4-1': { rows: [1,4,1,4,1], ys: [.92,.76,.62,.46,.30] },
+  '4-1-3-2': { rows: [1,4,1,3,2], ys: [.92,.76,.62,.46,.30] },
+  '4-2-4':   { rows: [1,4,2,4],   ys: [.92,.76,.60,.40] },
   // ── 5er Kette ──
-  '5-3-2':   { rows: [1,5,3,2],   ys: [.88,.65,.42,.18] },
-  '5-4-1':   { rows: [1,5,4,1],   ys: [.88,.65,.38,.14] },
-  '5-2-3':   { rows: [1,5,2,3],   ys: [.88,.65,.42,.18] },
-  '5-2-1-2': { rows: [1,5,2,1,2], ys: [.88,.67,.50,.32,.14] },
-  '5-3-1-1': { rows: [1,5,3,1,1], ys: [.88,.67,.48,.30,.13] },
+  '5-3-2':   { rows: [1,5,3,2],   ys: [.92,.76,.54,.36] },
+  '5-4-1':   { rows: [1,5,4,1],   ys: [.92,.76,.52,.32] },
+  '5-2-3':   { rows: [1,5,2,3],   ys: [.92,.76,.58,.38] },
+  '5-2-1-2': { rows: [1,5,2,1,2], ys: [.92,.76,.60,.44,.28] },
+  '5-3-1-1': { rows: [1,5,3,1,1], ys: [.92,.76,.56,.40,.26] },
 };
 const KIT_COLORS = ['#f0f0eb','#e8c84a','#e05252','#5b9bd5','#9b59b6','#1abc9c','#e67e22','#2c3e50','#ecf0f1','#e74c3c'];
 const ARROW_COLORS = ['#e8c84a','#e05252','#5b9bd5','#ffffff','#1abc9c'];
@@ -1011,14 +1024,18 @@ function showView(v) {
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 
 function switchRsb(panel) {
-  ['roster','rosters','lineups'].forEach(p => {
-    const el = document.getElementById('rsb'+p.charAt(0).toUpperCase()+p.slice(1));
-    if(el) el.style.display = p===panel ? 'block' : 'none';
-    const btn = document.getElementById('rsbt-'+p);
-    if(btn) btn.classList.toggle('active', p===panel);
-  });
+  // Legacy — no longer needed but kept for mobile sheet compatibility
   if(panel==='lineups') renderLineupList();
-  if(panel==='rosters') renderSavedRosterList();
+}
+
+function toggleLineupPanel() {
+  const panel = document.getElementById('lineupPanel');
+  const arrow = document.getElementById('lineupPanelArrow');
+  if(!panel) return;
+  const hidden = panel.style.display === 'none';
+  panel.style.display = hidden ? 'block' : 'none';
+  if(arrow) arrow.textContent = hidden ? '▲' : '▼';
+  if(hidden) renderLineupList();
 }
 
 // ===================================================
@@ -1711,6 +1728,17 @@ function loadSavedRoster(id) {
   showToast('Kader geladen: '+r.name);
 }
 
+function deleteCurrentRoster() {
+  if(!curRosterId) { showToast('Kein Kader ausgewählt'); return; }
+  const r = savedRosters.find(x=>x.id===curRosterId);
+  if(!r) return;
+  showConfirmCustom('Kader löschen', '"'+r.name+'" wirklich löschen?',
+    'Löschen', 'Abbrechen',
+    () => { deleteSavedRoster(curRosterId); },
+    () => {}
+  );
+}
+
 function deleteSavedRoster(id) {
   savedRosters = savedRosters.filter(x=>x.id!==id);
   if(curRosterId===id) { curRosterId=null; }
@@ -2247,6 +2275,56 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 
 function clearArrows() { arrows=[]; selArrowIdx=null; redrawArrows(); showToast('Pfeile gelöscht'); }
 
+function newLineup() {
+  // Check if there's anything worth saving
+  const hasContent = players.some(p=>p.name) || subs.length > 0;
+  if(hasContent) {
+    showConfirmCustom('Aufstellung speichern?', 'Möchtest du die aktuelle Aufstellung zuerst speichern?',
+      '💾 Speichern', 'Verwerfen',
+      () => {
+        // Save first, then start new
+        saveLineup();
+        // After saveLineup completes (via showPrompt callback), we can't chain directly
+        // So we set a flag to start new after save
+        _pendingNewLineup = true;
+      },
+      () => {
+        // Discard and start new directly
+        _doNewLineup();
+      }
+    );
+  } else {
+    _doNewLineup();
+  }
+}
+
+let _pendingNewLineup = false;
+
+function _doNewLineup() {
+  _pendingNewLineup = false;
+  players.forEach(p => { p.name=''; p.goals=0; p.assists=0; p.yellow=0; p.red=0; });
+  subs = [];
+  arrows = [];
+  snapshots = { start: null, end: null, combined: null };
+  curView = 'start';
+  curLineupId = null;
+  document.getElementById('iTeam').value = '';
+  document.getElementById('iOpp').value = '';
+  document.getElementById('iDate').value = '';
+  document.getElementById('iScore').value = '';
+  document.getElementById('iNotes').value = '';
+  ['start','end','combined'].forEach(v => {
+    const btn = document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
+    if(btn){ btn.style.background=v==='start'?'var(--acc)':'transparent'; btn.style.color=v==='start'?'var(--gd)':'var(--gr)'; }
+  });
+  closeEdit();
+  renderAll();
+  redrawArrows();
+  updateMatchDisplay();
+  saveNow();
+  showToast('Neue Aufstellung bereit');
+}
+
 function resetLineup() {
   showConfirm('Aufstellung zurücksetzen?', 'Namen, Statistiken, Pfeile und Auswechslungen werden geleert.', () => {
     saveHistory();
@@ -2437,9 +2515,10 @@ function saveLineup() {
           score: document.getElementById('iScore').value,
           notes: document.getElementById('iNotes').value,
         };
-        saveNow();
+        saveNow('overwrite lineup');
         renderLineupList();
         showToast('✓ Überschrieben: '+existing.name);
+        if(_pendingNewLineup) _doNewLineup();
       },
       () => {
         // New lineup
@@ -2473,9 +2552,10 @@ function saveLineup() {
     };
     savedLineups.push(newLu);
     curLineupId = newLu.id;
-    saveNow();
+    saveNow('new lineup: '+name);
     renderLineupList();
     showToast('✓ Gespeichert: '+name);
+    if(_pendingNewLineup) _doNewLineup();
   });
 }
 
@@ -2527,6 +2607,46 @@ function renderLineupList() {
     item.innerHTML=`<div style="flex:1"><div class="li-name">${lu.name}</div><div class="li-form">${lu.formation} · ${lu.meta.date||'–'}</div></div><div class="li-del" onclick="event.stopPropagation();deleteLineup(${lu.id})">✕</div>`;
     item.onclick=()=>loadLineup(lu.id);
     wrap.appendChild(item);
+  });
+}
+
+function switchArchive(tab) {
+  document.getElementById('archiveLineups').style.display = tab==='lineups' ? 'block' : 'none';
+  document.getElementById('archiveRosters').style.display = tab==='rosters' ? 'block' : 'none';
+  document.getElementById('archiveBtnLineups').className = tab==='lineups' ? 'btn' : 'btn sec';
+  document.getElementById('archiveBtnRosters').className = tab==='rosters' ? 'btn' : 'btn sec';
+  document.getElementById('archiveBtnLineups').style.fontSize = '.8rem';
+  document.getElementById('archiveBtnRosters').style.fontSize = '.8rem';
+  if(tab==='rosters') renderSavedRostersArchive();
+}
+
+function renderSavedRostersArchive() {
+  const wrap = document.getElementById('savedRostersContent');
+  if(!wrap) return;
+  if(!savedRosters.length) {
+    wrap.innerHTML = '<div class="no-data">Noch keine gespeicherten Kader.<br>Kader importieren und 💾 klicken.</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  savedRosters.forEach(r => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--gd);border:1px solid var(--pb);border-radius:8px;padding:14px;margin-bottom:12px;max-width:600px;';
+    if(r.id===curRosterId) card.style.borderColor = 'var(--acc)';
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="flex:1;">
+          <div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;letter-spacing:.05em;">${r.name}</div>
+          <div style="font-size:.75rem;color:var(--gr);">${r.roster.length} Spieler</div>
+        </div>
+        <button class="btn sec" style="font-size:.75rem;padding:4px 10px;" onclick="loadSavedRoster(${r.id});showView('lineup');showToast('Kader geladen: ${r.name}')">Laden</button>
+        <button class="btn del" style="font-size:.75rem;padding:4px 10px;" onclick="deleteSavedRoster(${r.id});renderSavedRostersArchive()">Löschen</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">
+        ${r.roster.slice(0,8).map(p=>`<span style="background:rgba(255,255,255,.07);border-radius:4px;padding:2px 7px;font-size:.72rem;">${p.num} ${p.name}</span>`).join('')}
+        ${r.roster.length>8?`<span style="font-size:.72rem;color:var(--gr);">+${r.roster.length-8} weitere</span>`:''}
+      </div>
+    `;
+    wrap.appendChild(card);
   });
 }
 
@@ -2616,7 +2736,7 @@ function saveStorage() {
 
 // Save immediately when critical data changes
 function saveNow(label) {
-  saveNow();
+  saveStorage();
   if(label) console.log('Saved:', label, '— savedRosters:', savedRosters.length, 'savedLineups:', savedLineups.length);
 }
 
