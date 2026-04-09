@@ -694,6 +694,7 @@ let selId = null;
 let nextPid = 1;
 let nextRid = 1;
 let nextLid = 1;
+let curLineupId = null; // id of currently loaded lineup
 let nextSrid = 1;
 
 // Start / End lineup toggle
@@ -2223,6 +2224,7 @@ function resetLineup() {
     arrows = [];
     snapshots = { start: null, end: null };
     curView = 'start';
+    curLineupId = null;
     // Reset toggle buttons
     ['start','end','combined'].forEach(v => {
       const btn = document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
@@ -2374,11 +2376,47 @@ function drawArrow(ctx,x1,y1,x2,y2,color,selected=false) {
 // SAVED LINEUPS
 // ===================================================
 function saveLineup() {
+  const existing = savedLineups.find(x=>x.id===curLineupId);
+  if(existing) {
+    // Already have a loaded lineup — ask overwrite or new
+    showConfirmCustom(
+      'Aufstellung speichern',
+      'Möchtest du "'+existing.name+'" überschreiben oder eine neue Aufstellung erstellen?',
+      'Überschreiben', 'Neu erstellen',
+      () => {
+        // Overwrite
+        if(curView !== 'combined') snapshots[curView] = getSnapshot();
+        existing.formation = curFormation;
+        existing.players = JSON.parse(JSON.stringify(players));
+        existing.roster = JSON.parse(JSON.stringify(roster));
+        existing.arrows = JSON.parse(JSON.stringify(arrows));
+        existing.snapshots = JSON.parse(JSON.stringify(snapshots));
+        existing.curView = curView;
+        existing.meta = {
+          team: document.getElementById('iTeam').value,
+          opp: document.getElementById('iOpp').value,
+          date: document.getElementById('iDate').value,
+          score: document.getElementById('iScore').value,
+          notes: document.getElementById('iNotes').value,
+        };
+        saveStorage();
+        renderLineupList();
+        showToast('✓ Überschrieben: '+existing.name);
+      },
+      () => {
+        // New lineup
+        curLineupId = null;
+        saveLineup();
+      }
+    );
+    return;
+  }
+
+  // No existing lineup — prompt for name
   const defaultName = (document.getElementById('iTeam').value||'Team') + ' – ' + curFormation;
   showPrompt('Aufstellung benennen', defaultName, name => {
-    // Save current view into its snapshot first
     if(curView !== 'combined') snapshots[curView] = getSnapshot();
-    savedLineups.push({
+    const newLu = {
       id: nextLid++,
       name,
       formation: curFormation,
@@ -2394,16 +2432,19 @@ function saveLineup() {
       arrows: JSON.parse(JSON.stringify(arrows)),
       snapshots: JSON.parse(JSON.stringify(snapshots)),
       curView,
-    });
+    };
+    savedLineups.push(newLu);
+    curLineupId = newLu.id;
     saveStorage();
     renderLineupList();
-    showToast('Aufstellung gespeichert: '+name);
+    showToast('✓ Gespeichert: '+name);
   });
 }
 
 function loadLineup(id) {
   const lu = savedLineups.find(x=>x.id===id);
   if(!lu) return;
+  curLineupId = lu.id;
   curFormation = lu.formation;
   players = JSON.parse(JSON.stringify(lu.players));
   roster = JSON.parse(JSON.stringify(lu.roster));
