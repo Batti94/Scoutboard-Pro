@@ -822,6 +822,8 @@ function checkUrlImport() {
 }
 
 function saveCurrentRosterWithName(name) {
+  // Always create a new roster entry — never overwrite existing
+  curRosterId = null;
   const newR = {id:nextSrid++, name, roster:JSON.parse(JSON.stringify(roster))};
   savedRosters.push(newR);
   curRosterId = newR.id;
