@@ -796,25 +796,28 @@ function checkUrlImport() {
       }
     }
 
-    // Check URL parameter import (legacy)
+    // Check URL parameter import
     const raw = params.get('import');
     if(!raw) return;
     const data = JSON.parse(decodeURIComponent(raw));
     if(!data.players || !data.players.length) return;
-    const imported = [];
-    data.players.forEach(p => {
+    const imported = data.players.map(p => {
+      // Handle both object format {num,name,pos} and string format "num|name|pos"
+      if(typeof p === 'object') return {id: nextRid++, num: p.num||'?', name: p.name||'', pos: p.pos||'–'};
       const parts = p.split('|');
-      if(parts[1]) imported.push({id: nextRid++, num: parts[0]||'?', name: parts[1], pos: parts[2]||'–'});
-    });
+      return {id: nextRid++, num: parts[0]||'?', name: parts[1]||'', pos: parts[2]||'–'};
+    }).filter(p => p.name);
     if(!imported.length) return;
     window.history.replaceState({}, document.title, window.location.pathname);
-    showConfirmCustom(
-      'Kader importieren',
-      '"'+data.name+'" — '+imported.length+' Spieler. Aktuellen Kader ersetzen oder hinzufügen?',
-      'Ersetzen', 'Hinzufügen',
-      () => { roster=imported; saveCurrentRosterWithName(data.name); renderRoster(); updateRosterSelect(); showToast('✓ Kader importiert: '+data.name); },
-      () => { roster=[...roster,...imported]; renderRoster(); updateRosterSelect(); showToast('✓ '+imported.length+' Spieler hinzugefügt'); }
-    );
+    setTimeout(() => {
+      showConfirmCustom(
+        'Kader importieren',
+        '"'+data.team+'" — '+imported.length+' Spieler. Aktuellen Kader ersetzen oder hinzufügen?',
+        'Ersetzen', 'Hinzufügen',
+        () => { roster=imported; saveCurrentRosterWithName(data.team); renderRoster(); updateRosterSelect(); showToast('✓ Kader importiert: '+data.team); },
+        () => { roster=[...roster,...imported]; renderRoster(); updateRosterSelect(); showToast('✓ '+imported.length+' Spieler hinzugefügt'); }
+      );
+    }, 500);
   } catch(e){ console.error('Import error:',e); }
 }
 
