@@ -901,8 +901,12 @@ function buildEpColors() {
 }
 
 function bindInputs() {
-  ['iTeam','iOpp','iDate','iScore'].forEach(id => {
-    document.getElementById(id).addEventListener('input', updateMatchDisplay);
+  ['iTeam','iOpp','iDate','iScore','iNotes'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) {
+      el.addEventListener('input', updateMatchDisplay);
+      el.addEventListener('input', () => saveStorage());
+    }
   });
   document.getElementById('nName').addEventListener('keydown', e => { if(e.key==='Enter') addRoster(); });
 }
@@ -2554,7 +2558,7 @@ function saveStorage() {
     if(curView !== 'combined') snapshots[curView] = getSnapshot();
     localStorage.setItem('sbpro_v5', JSON.stringify({
       curFormation, players, roster, subs, savedLineups,
-      savedRosters, curRosterId, nextSrid,
+      savedRosters, curRosterId, curLineupId, nextSrid,
       arrows, nextPid, nextRid, nextLid, nextSubId,
       curView, snapshots,
       meta: {
@@ -2565,7 +2569,7 @@ function saveStorage() {
         notes: document.getElementById('iNotes').value,
       }
     }));
-  } catch(e){}
+  } catch(e){ console.error('saveStorage error:', e); }
 }
 
 function loadStorage() {
@@ -2581,6 +2585,7 @@ function loadStorage() {
     if(d.savedRosters?.length) savedRosters = d.savedRosters;
     if(d.arrows?.length) arrows = d.arrows;
     curRosterId = d.curRosterId ?? null;
+    curLineupId = d.curLineupId ?? null;
     nextPid = d.nextPid||12;
     nextRid = d.nextRid||1;
     nextLid = d.nextLid||1;
@@ -2595,11 +2600,14 @@ function loadStorage() {
       document.getElementById('iScore').value = d.meta.score||'';
       document.getElementById('iNotes').value = d.meta.notes||'';
     }
-  } catch(e){}
+  } catch(e){ console.error('loadStorage error:', e); }
 }
 
-// Auto-save every 30s
-setInterval(() => { saveStorage(); }, 30000);
+// Save when leaving page
+window.addEventListener('beforeunload', () => saveStorage());
+
+// Auto-save every 15s
+setInterval(() => { saveStorage(); }, 15000);
 
 // ===================================================
 // PRINT
