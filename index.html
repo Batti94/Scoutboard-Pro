@@ -837,12 +837,11 @@ function checkUrlImport() {
 }
 
 function saveCurrentRosterWithName(name) {
-  // Always create a new roster entry — never overwrite existing
   curRosterId = null;
   const newR = {id:nextSrid++, name, roster:JSON.parse(JSON.stringify(roster))};
   savedRosters.push(newR);
   curRosterId = newR.id;
-  saveStorage();
+  saveNow('saveCurrentRosterWithName: '+name);
   updateRosterSelect();
   renderSavedRosterList();
 }
@@ -1683,7 +1682,7 @@ function saveCurrentRoster() {
   const existing = savedRosters.find(r=>r.id===curRosterId);
   if(existing) {
     existing.roster = JSON.parse(JSON.stringify(roster));
-    saveStorage();
+    saveNow('overwrite roster');
     updateRosterSelect();
     renderSavedRosterList();
     showToast('✓ Kader gespeichert: '+existing.name);
@@ -1692,7 +1691,7 @@ function saveCurrentRoster() {
       const newR = { id: nextSrid++, name, roster: JSON.parse(JSON.stringify(roster)) };
       savedRosters.push(newR);
       curRosterId = newR.id;
-      saveStorage();
+      saveNow('new roster: '+name);
       updateRosterSelect();
       renderSavedRosterList();
       showToast('✓ Kader gespeichert: '+name);
@@ -1701,21 +1700,21 @@ function saveCurrentRoster() {
 }
 
 function loadSavedRoster(id) {
-  if(!id) { roster=[]; curRosterId=null; renderRoster(); saveStorage(); return; }
+  if(!id) { roster=[]; curRosterId=null; renderRoster(); saveNow(); return; }
   const r = savedRosters.find(x=>x.id===parseInt(id));
   if(!r) return;
   roster = JSON.parse(JSON.stringify(r.roster));
   nextRid = Math.max(...roster.map(x=>x.id), 0) + 1;
   curRosterId = r.id;
   renderRoster();
-  saveStorage();
+  saveNow();
   showToast('Kader geladen: '+r.name);
 }
 
 function deleteSavedRoster(id) {
   savedRosters = savedRosters.filter(x=>x.id!==id);
   if(curRosterId===id) { curRosterId=null; }
-  saveStorage();
+  saveNow();
   updateRosterSelect();
   renderSavedRosterList();
   showToast('Kader gelöscht');
@@ -2438,7 +2437,7 @@ function saveLineup() {
           score: document.getElementById('iScore').value,
           notes: document.getElementById('iNotes').value,
         };
-        saveStorage();
+        saveNow();
         renderLineupList();
         showToast('✓ Überschrieben: '+existing.name);
       },
@@ -2474,7 +2473,7 @@ function saveLineup() {
     };
     savedLineups.push(newLu);
     curLineupId = newLu.id;
-    saveStorage();
+    saveNow();
     renderLineupList();
     showToast('✓ Gespeichert: '+name);
   });
@@ -2513,7 +2512,7 @@ function loadLineup(id) {
 
 function deleteLineup(id) {
   savedLineups = savedLineups.filter(x=>x.id!==id);
-  saveStorage();
+  saveNow();
   renderLineupList();
   renderSavedView();
 }
@@ -2606,26 +2605,19 @@ function saveStorage() {
     };
     const json = JSON.stringify(data);
     localStorage.setItem('sbpro_v5', json);
-  } catch(e){
-    console.error('saveStorage failed:', e);
-    // Fallback: save only critical data without snapshots
-    try {
-      localStorage.setItem('sbpro_v5', JSON.stringify({
-        curFormation, players, roster, subs,
-        savedLineups, savedRosters,
-        curRosterId, curLineupId, nextSrid,
-        arrows, nextPid, nextRid, nextLid, nextSubId,
-        curView,
-        meta: {
-          team: document.getElementById('iTeam').value,
-          opp: document.getElementById('iOpp').value,
-          date: document.getElementById('iDate').value,
-          score: document.getElementById('iScore').value,
-          notes: document.getElementById('iNotes').value,
-        }
-      }));
-    } catch(e2){ console.error('saveStorage fallback failed:', e2); }
+    // Verify it was saved correctly
+    const verify = localStorage.getItem('sbpro_v5');
+    if(!verify) throw new Error('Verify failed');
+  } catch(e) {
+    console.error('saveStorage error:', e);
+    showToast('⚠️ Speichern fehlgeschlagen!');
   }
+}
+
+// Save immediately when critical data changes
+function saveNow(label) {
+  saveNow();
+  if(label) console.log('Saved:', label, '— savedRosters:', savedRosters.length, 'savedLineups:', savedLineups.length);
 }
 
 function loadStorage() {
