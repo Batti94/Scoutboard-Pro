@@ -771,6 +771,12 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- 2. Kader-Spieler (gefiltert, große Cards) -->
     <div id="mobEpRosterWrap">
+      <div style="position:relative;margin-bottom:10px;">
+        <input type="text" id="mobEpSearch" placeholder="Name oder Nummer suchen…"
+          style="width:100%;padding:9px 12px 9px 34px;font-size:.88rem;"
+          oninput="filterMobRosterList(this.value)">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;opacity:.5;">🔍</span>
+      </div>
       <div id="mobEpRosterList"></div>
     </div>
 
@@ -2205,6 +2211,8 @@ function openMobPlayerEdit(p) {
       card.className = 'mob-rpc'
         + (isUsed && !isCurrent ? ' rpc-disabled' : '')
         + (isCurrent ? ' rpc-selected' : '');
+      card.dataset.name = r.name.toLowerCase();
+      card.dataset.num  = r.num.toLowerCase();
 
       const dotColor = isCurrent ? (p.color||'var(--wh)') : 'var(--wh)';
       card.innerHTML = `
@@ -2226,7 +2234,23 @@ function openMobPlayerEdit(p) {
     });
   }
 
+  // Reset search field
+  const search = document.getElementById('mobEpSearch');
+  if(search) search.value = '';
+
   openMobSheet('sheetPlayerEdit');
+  // Auto-focus search after animation
+  setTimeout(() => { if(search) search.focus(); }, 320);
+}
+
+function filterMobRosterList(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll('#mobEpRosterList .mob-rpc').forEach(card => {
+    if(!q) { card.style.display = ''; return; }
+    const name = (card.dataset.name || '').toLowerCase();
+    const num  = (card.dataset.num  || '').toLowerCase();
+    card.style.display = (name.includes(q) || num.includes(q)) ? '' : 'none';
+  });
 }
 
 function applyMobPlayerEdit() {
