@@ -245,8 +245,8 @@ textarea{resize:vertical;min-height:70px;}
   /* lineup view: vertical stack, each sub-view fills it */
   #viewLineup{flex-direction:column;overflow:hidden;}
 
-  /* pitch-center: scrollable fill */
-  .pitch-center{flex:1;overflow-y:auto;padding:0 0 72px;display:flex;flex-direction:column;}
+  /* pitch-center: scrollable fill, enough room above bottom nav */
+  .pitch-center{flex:1;overflow-y:auto;padding:0 0 84px;display:flex;flex-direction:column;}
 
   /* mob roster bar visible */
   .mob-roster-bar{display:flex!important;}
@@ -411,13 +411,6 @@ textarea{resize:vertical;min-height:70px;}
 
   <!-- PITCH -->
   <div class="pitch-center">
-    <!-- Mobile: roster select bar (desktop uses rsb dropdown) -->
-    <div class="mob-roster-bar" id="mobRosterBar">
-      <select class="mob-roster-sel" id="rosterSelectMob" style="flex:1;" onchange="loadSavedRoster(this.value)">
-        <option value="">– Kein Kader –</option>
-      </select>
-      <button class="mob-save-btn" onclick="saveLineup();showToast('Aufstellung gespeichert')">💾 Speichern</button>
-    </div>
     <div class="pitch-header">
       <div class="team-name" id="dTeam">Mein Team</div>
       <div class="match-info" id="dMatch">–</div>
@@ -740,6 +733,43 @@ textarea{resize:vertical;min-height:70px;}
     <button class="btn sec" style="width:100%" onclick="saveLineup();closeMobSheet()">💾 Aufstellung speichern</button>
     <button class="btn sec" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="showView('saved');closeMobSheet()">📁 Archiv</button>
     <button class="btn sec" style="width:100%" onclick="closeMobSheet();openExportModal()">📷 Export</button>
+  </div>
+</div>
+
+<!-- SHEET: PLAYER EDIT (mobile) -->
+<div class="mob-sheet" id="sheetPlayerEdit">
+  <div class="mob-sheet-handle"></div>
+  <div class="mob-sheet-header">
+    <span class="mob-sheet-title" id="sheetPlayerEditTitle">Spieler bearbeiten</span>
+    <button class="mob-sheet-close" onclick="closeMobSheet();closeEdit()">✕</button>
+  </div>
+  <div class="mob-sheet-body" style="padding-bottom:24px;">
+    <!-- Name + Nummer -->
+    <div class="row2" style="margin-bottom:12px;gap:8px;">
+      <div style="width:70px;flex:none;">
+        <label class="lbl">#</label>
+        <input type="text" id="mobEpNum" placeholder="7" style="font-size:1rem;text-align:center;">
+      </div>
+      <div style="flex:1;">
+        <label class="lbl">Name</label>
+        <input type="text" id="mobEpName" placeholder="Spielername" style="font-size:.95rem;">
+      </div>
+    </div>
+    <!-- Trikotfarbe -->
+    <div style="margin-bottom:14px;">
+      <label class="lbl">Trikotfarbe</label>
+      <div class="colors" id="mobEpColors" style="flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+    </div>
+    <!-- Kader-Spieler Liste -->
+    <div id="mobEpRosterWrap" style="margin-bottom:14px;">
+      <label class="lbl" style="margin-bottom:6px;display:block;">Aus Kader zuweisen</label>
+      <div id="mobEpRosterList" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;"></div>
+    </div>
+    <!-- Buttons -->
+    <div style="display:flex;gap:8px;">
+      <button class="btn del" style="flex:0 0 auto;" onclick="mobPlayerDelete()">✕</button>
+      <button class="btn" style="flex:1;min-height:48px;" onclick="applyMobPlayerEdit()">✓ Speichern</button>
+    </div>
   </div>
 </div>
 
@@ -1900,7 +1930,7 @@ function deleteSavedRoster(id) {
 }
 
 function updateRosterSelect() {
-  ['rosterSelect','rosterSelectMob','rosterSelectMobHdr'].forEach(selId => {
+  ['rosterSelect','rosterSelectMobHdr'].forEach(selId => {
     const sel = document.getElementById(selId);
     if(!sel) return;
     sel.innerHTML = '<option value="">– Kein Kader –</option>';
@@ -2048,6 +2078,10 @@ function selectPlayer(id) {
   selId = id;
   const p = players.find(x=>x.id===id);
   if(!p) return;
+  if(isMobile()) {
+    openMobPlayerEdit(p);
+    return;
+  }
   document.getElementById('epTitle').textContent = p.isGK?'Torwart':'Spieler '+(p.num||id);
   document.getElementById('epNum').value = p.num||'';
   document.getElementById('epName').value = p.name||'';
@@ -2058,6 +2092,87 @@ function selectPlayer(id) {
   document.querySelectorAll('#epColors .cpick').forEach(d=>d.classList.toggle('sel', d.dataset.c===p.color));
   document.getElementById('editPanel').classList.add('open');
   renderPitch();
+}
+
+function openMobPlayerEdit(p) {
+  document.getElementById('sheetPlayerEditTitle').textContent = p.isGK ? 'Torwart' : 'Spieler ' + (p.num||'');
+  document.getElementById('mobEpNum').value = p.num||'';
+  document.getElementById('mobEpName').value = p.name||'';
+
+  // Build kit color picker
+  const colWrap = document.getElementById('mobEpColors');
+  colWrap.innerHTML = '';
+  KIT_COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'cpick' + (c === (p.color||KIT_COLORS[0]) ? ' sel' : '');
+    d.style.cssText = `background:${c};width:32px;height:32px;`;
+    d.dataset.c = c;
+    d.onclick = () => { colWrap.querySelectorAll('.cpick').forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); };
+    colWrap.appendChild(d);
+  });
+
+  // Build roster list
+  const list = document.getElementById('mobEpRosterList');
+  list.innerHTML = '';
+  const rosterWrap = document.getElementById('mobEpRosterWrap');
+  if(!roster.length) {
+    rosterWrap.style.display = 'none';
+  } else {
+    rosterWrap.style.display = '';
+    roster.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'mob-field-player-item';
+      item.style.borderRadius = '8px';
+      item.innerHTML = `
+        <span class="mob-fpi-num">${r.num}</span>
+        <span class="mob-fpi-name">${r.name}</span>
+        <span class="mob-fpi-pos">${r.pos||'–'}</span>
+      `;
+      item.onclick = () => {
+        document.getElementById('mobEpNum').value = r.num;
+        document.getElementById('mobEpName').value = r.name;
+        // highlight selection
+        list.querySelectorAll('.mob-field-player-item').forEach(x=>x.style.background='');
+        item.style.background = 'var(--accbg)';
+      };
+      list.appendChild(item);
+    });
+  }
+
+  document.getElementById('mobOverlay').classList.add('show');
+  document.getElementById('sheetPlayerEdit').classList.add('open');
+}
+
+function applyMobPlayerEdit() {
+  if(!selId) return;
+  saveHistory();
+  const p = players.find(x=>x.id===selId);
+  if(!p) return;
+  p.num = document.getElementById('mobEpNum').value.trim();
+  p.name = document.getElementById('mobEpName').value.trim();
+  const sel = document.querySelector('#mobEpColors .cpick.sel');
+  if(sel) p.color = sel.dataset.c;
+  // apply to all snapshots too
+  ['start','end'].forEach(v => {
+    const sp = snapshots[v]?.players?.find(x=>x.id===selId);
+    if(sp) { sp.num=p.num; sp.name=p.name; sp.color=p.color; }
+  });
+  closeMobSheet();
+  closeEdit();
+  renderPitch();
+  saveStorage();
+  showToast((p.name||'Spieler')+' gespeichert');
+}
+
+function mobPlayerDelete() {
+  if(!selId) return;
+  saveHistory();
+  const p = players.find(x=>x.id===selId);
+  if(p) { p.name=''; p.num=''; p.color=KIT_COLORS[0]; }
+  closeMobSheet();
+  closeEdit();
+  renderPitch();
+  saveStorage();
 }
 
 function closeEdit() {
