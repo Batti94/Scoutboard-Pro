@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ScoutBoard Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -765,13 +766,13 @@ let dragOff = {x:0,y:0};
 // ===================================================
 // INIT
 // ===================================================
-function init() {
+async function init() {
   buildFormationBtns();
   buildKitColors();
   buildEpColors();
   buildMobFormationBtns();
   buildMobKitColors();
-  loadStorage();
+  await loadStorage();
   applyFormation(curFormation, false);
   bindInputs();
   bindPitchClick();
@@ -2707,6 +2708,41 @@ function renderStats() {
 }
 
 // ===================================================
+// SUPABASE
+// ===================================================
+const SUPABASE_URL = 'https://gsdjbxxwqagwbmnplhyv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_571zY64p8tJDyYVJ65lFjQ_BIcsqTkq';
+const SB_TABLE = 'scoutboard_data';
+const SB_KEY = 'main';
+const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function saveToSupabase(json) {
+  try {
+    const { error } = await sbClient
+      .from(SB_TABLE)
+      .upsert({ key: SB_KEY, data: json, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) throw error;
+  } catch(e) {
+    console.warn('Supabase save error:', e);
+  }
+}
+
+async function loadFromSupabase() {
+  try {
+    const { data, error } = await sbClient
+      .from(SB_TABLE)
+      .select('data')
+      .eq('key', SB_KEY)
+      .single();
+    if (error) throw error;
+    return data?.data || null;
+  } catch(e) {
+    console.warn('Supabase load error:', e);
+    return null;
+  }
+}
+
+// ===================================================
 // PERSIST
 // ===================================================
 function saveStorage() {
@@ -2731,6 +2767,8 @@ function saveStorage() {
     // Verify it was saved correctly
     const verify = localStorage.getItem('sbpro_v5');
     if(!verify) throw new Error('Verify failed');
+    // Also persist to Supabase (fire-and-forget)
+    saveToSupabase(json);
   } catch(e) {
     console.error('saveStorage error:', e);
     showToast('⚠️ Speichern fehlgeschlagen!');
@@ -2743,10 +2781,9 @@ function saveNow(label) {
   if(label) console.log('Saved:', label, '— savedRosters:', savedRosters.length, 'savedLineups:', savedLineups.length);
 }
 
-function loadStorage() {
+function applyStorageData(raw) {
+  if(!raw) return;
   try {
-    const raw = localStorage.getItem('sbpro_v5') || localStorage.getItem('sbpro_v4') || localStorage.getItem('sbpro_v3');
-    if(!raw) return;
     const d = JSON.parse(raw);
     curFormation = d.curFormation||'4-3-3';
     if(d.players?.length) players = d.players;
@@ -2771,7 +2808,21 @@ function loadStorage() {
       document.getElementById('iScore').value = d.meta.score||'';
       document.getElementById('iNotes').value = d.meta.notes||'';
     }
-  } catch(e){ console.error('loadStorage error:', e); }
+  } catch(e){ console.error('applyStorageData error:', e); }
+}
+
+async function loadStorage() {
+  // Try Supabase first
+  const remoteRaw = await loadFromSupabase();
+  if(remoteRaw) {
+    applyStorageData(remoteRaw);
+    // Keep localStorage in sync
+    localStorage.setItem('sbpro_v5', remoteRaw);
+    return;
+  }
+  // Fallback: localStorage
+  const raw = localStorage.getItem('sbpro_v5') || localStorage.getItem('sbpro_v4') || localStorage.getItem('sbpro_v3');
+  applyStorageData(raw);
 }
 
 // Save when leaving page
