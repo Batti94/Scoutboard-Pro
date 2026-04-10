@@ -241,6 +241,12 @@ textarea{resize:vertical;min-height:70px;}
 .mob-rpc-badge.match{background:rgba(232,200,74,.18);color:var(--acc);}
 .mob-rpc-badge.current{background:rgba(39,174,96,.18);color:#27ae60;}
 .mob-ep-divider{border:none;border-top:1px solid var(--pb);margin:14px 0;}
+.mob-stat-ctrl-row{background:rgba(255,255,255,.04);border:1px solid var(--pb);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:5px;}
+.mob-stat-ctrl-lbl{font-size:.72rem;color:var(--gr);font-weight:600;}
+.mob-stat-ctrl-btns{display:flex;align-items:center;gap:6px;}
+.mob-sc-btn{width:34px;height:34px;border:none;border-radius:6px;font-size:1.1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mob-sc-btn.minus{background:rgba(255,255,255,.1);color:var(--wh);}
+.mob-sc-val{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;min-width:24px;text-align:center;color:var(--wh);}
 
 /* ── MOBILE ── */
 @media(max-width:700px){
@@ -388,12 +394,15 @@ textarea{resize:vertical;min-height:70px;}
   <button class="hbtn sec" onclick="exportBackup()" title="Alle Daten sichern">⬇ Backup</button>
   <button class="hbtn sec" onclick="triggerRestore()" title="Backup wiederherstellen">⬆ Restore</button>
   <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="importBackup(event)">
-  <!-- mobile: roster select + save button in header -->
+  <!-- mobile: roster select + kit color + save button in header -->
   <div class="mob-hdr-extra">
     <select class="mob-roster-sel" id="rosterSelectMobHdr" onchange="loadSavedRoster(this.value)">
       <option value="">– Kader –</option>
     </select>
-    <button class="mob-save-btn" onclick="saveLineup()">💾 Speichern</button>
+    <button id="mobKitColorBtn" title="Teamfarbe" onclick="openMobKitColorSheet()"
+      style="width:32px;height:32px;border-radius:50%;border:2.5px solid rgba(255,255,255,.6);background:#f0f0eb;flex-shrink:0;cursor:pointer;transition:transform .15s;"
+      onmouseenter="this.style.transform='scale(1.12)'" onmouseleave="this.style.transform=''"></button>
+    <button class="mob-save-btn" onclick="saveLineup()">💾</button>
   </div>
 </header>
 
@@ -783,7 +792,7 @@ textarea{resize:vertical;min-height:70px;}
     <!-- 3. Manuell eingeben -->
     <hr class="mob-ep-divider">
     <label class="lbl" style="display:block;margin-bottom:8px;">Manuell eingeben</label>
-    <div class="row2" style="gap:8px;margin-bottom:12px;">
+    <div class="row2" style="gap:8px;margin-bottom:14px;">
       <div style="width:72px;flex:none;">
         <label class="lbl">#</label>
         <input type="text" id="mobEpNum" placeholder="7" style="font-size:1rem;text-align:center;">
@@ -793,10 +802,66 @@ textarea{resize:vertical;min-height:70px;}
         <input type="text" id="mobEpName" placeholder="Spielername" style="font-size:.92rem;">
       </div>
     </div>
+
+    <!-- 4. Statistiken -->
+    <hr class="mob-ep-divider" style="margin-top:0;">
+    <label class="lbl" style="display:block;margin-bottom:10px;">Statistiken</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div class="mob-stat-ctrl-row">
+        <span class="mob-stat-ctrl-lbl">⚽ Tore</span>
+        <div class="mob-stat-ctrl-btns">
+          <button class="mob-sc-btn minus" onclick="mobEpAdj('goals',-1)">−</button>
+          <span class="mob-sc-val" id="mobEpGoals">0</span>
+          <button class="mob-sc-btn plus" style="background:#27ae60;" onclick="mobEpAdj('goals',1)">+</button>
+        </div>
+      </div>
+      <div class="mob-stat-ctrl-row">
+        <span class="mob-stat-ctrl-lbl">🅰 Assists</span>
+        <div class="mob-stat-ctrl-btns">
+          <button class="mob-sc-btn minus" onclick="mobEpAdj('assists',-1)">−</button>
+          <span class="mob-sc-val" id="mobEpAssists">0</span>
+          <button class="mob-sc-btn plus" style="background:#2980b9;" onclick="mobEpAdj('assists',1)">+</button>
+        </div>
+      </div>
+      <div class="mob-stat-ctrl-row">
+        <span class="mob-stat-ctrl-lbl">🟨 Gelb</span>
+        <div class="mob-stat-ctrl-btns">
+          <button class="mob-sc-btn minus" onclick="mobEpAdj('yellow',-1)">−</button>
+          <span class="mob-sc-val" id="mobEpYellow">0</span>
+          <button class="mob-sc-btn plus" style="background:#c9a020;" onclick="mobEpAdj('yellow',1)">+</button>
+        </div>
+      </div>
+      <div class="mob-stat-ctrl-row">
+        <span class="mob-stat-ctrl-lbl">🟥 Rot</span>
+        <div class="mob-stat-ctrl-btns">
+          <button class="mob-sc-btn minus" onclick="mobEpAdj('red',-1)">−</button>
+          <span class="mob-sc-val" id="mobEpRed">0</span>
+          <button class="mob-sc-btn plus" style="background:#c03030;" onclick="mobEpAdj('red',1)">+</button>
+        </div>
+      </div>
+    </div>
+
     <div style="display:flex;gap:8px;">
       <button class="btn del" style="flex:0 0 auto;min-height:48px;padding:0 16px;" onclick="mobPlayerDelete()">✕</button>
       <button class="btn" style="flex:1;min-height:48px;" onclick="applyMobPlayerEdit()">✓ Speichern</button>
     </div>
+  </div>
+</div>
+
+<!-- SHEET: TEAM KIT COLOR -->
+<div class="mob-sheet" id="sheetKitColor">
+  <div class="mob-sheet-handle"></div>
+  <div class="mob-sheet-header">
+    <span class="mob-sheet-title">Teamfarbe</span>
+    <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
+  </div>
+  <div class="mob-sheet-body">
+    <div style="font-size:.8rem;color:var(--gr);margin-bottom:14px;line-height:1.5;">
+      Farbe wählen — wird auf alle Spieler auf dem Feld angewendet.<br>
+      Einzelne Spieler können danach im Player-Sheet abweichend gefärbt werden.
+    </div>
+    <div id="mobKitColorPicker" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;"></div>
+    <button class="btn" style="width:100%;min-height:48px;" onclick="applyTeamKitColor()">✓ Auf alle anwenden</button>
   </div>
 </div>
 
@@ -2145,9 +2210,13 @@ function openMobPlayerEdit(p) {
   // Title
   document.getElementById('sheetPlayerEditTitle').textContent = posLabel(p.pos, p.isGK);
 
-  // Pre-fill manual inputs
-  document.getElementById('mobEpNum').value  = p.num  || '';
-  document.getElementById('mobEpName').value = p.name || '';
+  // Pre-fill manual inputs + stats
+  document.getElementById('mobEpNum').value     = p.num     || '';
+  document.getElementById('mobEpName').value    = p.name    || '';
+  document.getElementById('mobEpGoals').textContent   = p.goals   || 0;
+  document.getElementById('mobEpAssists').textContent = p.assists || 0;
+  document.getElementById('mobEpYellow').textContent  = p.yellow  || 0;
+  document.getElementById('mobEpRed').textContent     = p.red     || 0;
 
   // Kit color picker
   const colWrap = document.getElementById('mobEpColors');
@@ -2258,20 +2327,30 @@ function applyMobPlayerEdit() {
   saveHistory();
   const p = players.find(x=>x.id===selId);
   if(!p) return;
-  p.num = document.getElementById('mobEpNum').value.trim();
-  p.name = document.getElementById('mobEpName').value.trim();
+  p.num     = document.getElementById('mobEpNum').value.trim();
+  p.name    = document.getElementById('mobEpName').value.trim();
+  p.goals   = parseInt(document.getElementById('mobEpGoals').textContent)   || 0;
+  p.assists = parseInt(document.getElementById('mobEpAssists').textContent) || 0;
+  p.yellow  = parseInt(document.getElementById('mobEpYellow').textContent)  || 0;
+  p.red     = parseInt(document.getElementById('mobEpRed').textContent)     || 0;
   const sel = document.querySelector('#mobEpColors .cpick.sel');
   if(sel) p.color = sel.dataset.c;
-  // apply to all snapshots too
+  // sync to all snapshots
   ['start','end'].forEach(v => {
     const sp = snapshots[v]?.players?.find(x=>x.id===selId);
-    if(sp) { sp.num=p.num; sp.name=p.name; sp.color=p.color; }
+    if(sp) { sp.num=p.num; sp.name=p.name; sp.color=p.color; sp.goals=p.goals; sp.assists=p.assists; sp.yellow=p.yellow; sp.red=p.red; }
   });
   closeMobSheet();
   closeEdit();
   renderPitch();
   saveStorage();
   showToast((p.name||'Spieler')+' gespeichert');
+}
+
+function mobEpAdj(stat, delta) {
+  const el = document.getElementById('mobEp' + stat.charAt(0).toUpperCase() + stat.slice(1));
+  if(!el) return;
+  el.textContent = Math.max(0, (parseInt(el.textContent) || 0) + delta);
 }
 
 function mobPlayerDelete() {
@@ -3705,9 +3784,16 @@ function openSubSwapSheet(subId) {
   const list = document.getElementById('subSwapList');
   if(title) title.textContent = `${sub.num} ${sub.name} — einwechseln für:`;
   list.innerHTML = '';
+
+  // Info hint
+  const hint = document.createElement('div');
+  hint.style.cssText = 'font-size:.75rem;color:var(--gr);padding:8px 16px 12px;line-height:1.5;';
+  hint.textContent = 'Spieler antippen → Einwechslung wird in der Ende-Ansicht eingetragen.';
+  list.appendChild(hint);
+
   const fieldPlayers = players.filter(p => p.name);
   if(!fieldPlayers.length) {
-    list.innerHTML = '<div style="color:var(--gr);padding:20px 16px;text-align:center;font-size:.85rem;">Keine Spieler auf dem Feld</div>';
+    list.innerHTML += '<div style="color:var(--gr);padding:20px 16px;text-align:center;font-size:.85rem;">Keine Spieler auf dem Feld</div>';
   } else {
     fieldPlayers.forEach(p => {
       const item = document.createElement('div');
@@ -3715,24 +3801,109 @@ function openSubSwapSheet(subId) {
       const isCurrent = p.id === sub.subForId;
       const dotBg = p.color || 'var(--wh)';
       item.innerHTML = `
-        <div style="width:36px;height:36px;border-radius:50%;background:${dotBg};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:var(--gd);flex-shrink:0;">${p.num||'?'}</div>
-        <span class="mob-fpi-name">${p.name}</span>
-        <span class="mob-fpi-pos">${p.pos||'–'}</span>
-        ${isCurrent ? '<span style="color:#27ae60;font-size:.75rem;font-weight:700;">✓</span>' : ''}
+        <div style="width:40px;height:40px;border-radius:50%;background:${dotBg};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gd);flex-shrink:0;border:2px solid rgba(255,255,255,.4);">${p.num||'?'}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="mob-fpi-name">${p.name}</div>
+          <div style="font-size:.68rem;color:var(--gr);">${p.pos||'–'}</div>
+        </div>
+        ${isCurrent ? '<span style="color:#27ae60;font-size:.8rem;font-weight:700;padding:3px 8px;background:rgba(39,174,96,.15);border-radius:6px;">Aktiv ✓</span>' : '<span style="font-size:.75rem;color:var(--gr);">⇄ Wechsel</span>'}
       `;
       item.onclick = () => {
-        if(isCurrent) { sub.subForId = null; }
-        else { sub.subForId = p.id; }
-        closeMobSheet();
-        renderMobBench();
-        renderSubs();
-        saveStorage();
-        showToast(isCurrent ? 'Verknüpfung entfernt' : `${sub.name} ⇄ ${p.name}`);
+        if(isCurrent) {
+          // Undo substitution in end snapshot
+          sub.subForId = null;
+          undoSubstitutionInEnd(sub, p.id);
+          closeMobSheet();
+          renderMobBench();
+          renderSubs();
+          saveStorage();
+          showToast('Einwechslung rückgängig');
+        } else {
+          // Execute substitution into Ende view
+          sub.subForId = p.id;
+          applySubstitutionToEnd(sub, p.id);
+          closeMobSheet();
+          renderMobBench();
+          renderSubs();
+          saveStorage();
+          showToast(`↑ ${sub.name}  ↓ ${p.name}`);
+        }
       };
       list.appendChild(item);
     });
   }
   openMobSheet('sheetSubSwap');
+}
+
+function applySubstitutionToEnd(sub, fieldPlayerId) {
+  // Ensure we have an end snapshot to work with
+  if(!snapshots.end) {
+    if(snapshots.start) snapshots.end = JSON.parse(JSON.stringify(snapshots.start));
+    else snapshots.end = { formation: curFormation, players: JSON.parse(JSON.stringify(players)), subs: JSON.parse(JSON.stringify(subs)), arrows: [] };
+  }
+  const endPlayers = snapshots.end.players;
+  const fieldP = endPlayers.find(x => x.id === fieldPlayerId);
+  if(!fieldP) return;
+  // Replace field player with sub in the end snapshot
+  const orig = { num: fieldP.num, name: fieldP.name, color: fieldP.color, pos: fieldP.pos };
+  fieldP.num    = sub.num;
+  fieldP.name   = sub.name;
+  fieldP.color  = sub.color || fieldP.color;
+  fieldP.subIn  = true;      // mark as substituted in
+  fieldP.subOut = orig;      // remember who came out
+  // Switch to Ende view so the change is visible
+  switchLineupView('end');
+  // Switch mobile nav to lineup tab
+  document.querySelectorAll('.mnb').forEach(b => b.classList.remove('active'));
+  const ln = document.getElementById('mnb-lineup'); if(ln) ln.classList.add('active');
+  const pc = document.querySelector('.pitch-center'); if(pc) pc.style.display = '';
+  document.getElementById('mobViewSubs')?.classList.add('mob-hidden');
+}
+
+// ── Team Kit Color ──────────────────────────────────
+let selectedTeamColor = KIT_COLORS[0];
+
+function openMobKitColorSheet() {
+  const picker = document.getElementById('mobKitColorPicker');
+  picker.innerHTML = '';
+  KIT_COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.style.cssText = `width:44px;height:44px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${c===selectedTeamColor?'#fff':'transparent'};transition:all .15s;`;
+    d.onclick = () => {
+      selectedTeamColor = c;
+      picker.querySelectorAll('div').forEach(x => x.style.borderColor = 'transparent');
+      d.style.borderColor = '#fff';
+    };
+    picker.appendChild(d);
+  });
+  openMobSheet('sheetKitColor');
+}
+
+function applyTeamKitColor() {
+  saveHistory();
+  players.forEach(p => { p.color = selectedTeamColor; });
+  ['start','end'].forEach(v => { snapshots[v]?.players?.forEach(p => { p.color = selectedTeamColor; }); });
+  // Update header button color
+  const btn = document.getElementById('mobKitColorBtn');
+  if(btn) btn.style.background = selectedTeamColor;
+  closeMobSheet();
+  renderPitch();
+  saveStorage();
+  showToast('Teamfarbe angewendet');
+}
+
+function undoSubstitutionInEnd(sub, fieldPlayerId) {
+  if(!snapshots.end) return;
+  const fieldP = snapshots.end.players.find(x => x.id === fieldPlayerId);
+  if(!fieldP || !fieldP.subOut) return;
+  const orig = fieldP.subOut;
+  fieldP.num    = orig.num;
+  fieldP.name   = orig.name;
+  fieldP.color  = orig.color;
+  fieldP.pos    = orig.pos;
+  delete fieldP.subIn;
+  delete fieldP.subOut;
+  if(curView === 'end') renderPitch();
 }
 
 function mobRemoveSub(subId) {
