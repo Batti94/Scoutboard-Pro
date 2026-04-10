@@ -228,6 +228,20 @@ textarea{resize:vertical;min-height:70px;}
 .mob-sec-title{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.1em;color:var(--gr);margin:12px 0 8px;}
 .mob-sec-title:first-child{margin-top:0;}
 
+/* Roster picker cards (player-edit sheet) */
+.mob-rpc{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--pb);margin-bottom:7px;transition:background .13s,border-color .13s;min-height:58px;-webkit-tap-highlight-color:transparent;}
+.mob-rpc:active{background:var(--accbg);border-color:var(--acc);}
+.mob-rpc.rpc-selected{background:var(--accbg);border-color:var(--acc);}
+.mob-rpc.rpc-disabled{opacity:.38;pointer-events:none;}
+.mob-rpc-dot{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gd);flex-shrink:0;border:2px solid rgba(255,255,255,.55);}
+.mob-rpc-info{flex:1;min-width:0;}
+.mob-rpc-name{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mob-rpc-pos{font-size:.68rem;color:var(--gr);margin-top:1px;}
+.mob-rpc-badge{font-size:.65rem;font-weight:700;padding:2px 6px;border-radius:8px;flex-shrink:0;}
+.mob-rpc-badge.match{background:rgba(232,200,74,.18);color:var(--acc);}
+.mob-rpc-badge.current{background:rgba(39,174,96,.18);color:#27ae60;}
+.mob-ep-divider{border:none;border-top:1px solid var(--pb);margin:14px 0;}
+
 /* ── MOBILE ── */
 @media(max-width:700px){
 
@@ -250,6 +264,10 @@ textarea{resize:vertical;min-height:70px;}
 
   /* mob roster bar visible */
   .mob-roster-bar{display:flex!important;}
+
+  /* hide pitch-header team/match on mobile — app header is sufficient */
+  .pitch-header .team-name,.pitch-header .match-info{display:none;}
+  .pitch-header{padding:6px 0 2px;}
 
   /* bigger view toggle */
   #btnStart,#btnEnd,#btnCombined{padding:10px 18px!important;font-size:.88rem!important;min-height:44px!important;}
@@ -740,34 +758,37 @@ textarea{resize:vertical;min-height:70px;}
 <div class="mob-sheet" id="sheetPlayerEdit">
   <div class="mob-sheet-handle"></div>
   <div class="mob-sheet-header">
-    <span class="mob-sheet-title" id="sheetPlayerEditTitle">Spieler bearbeiten</span>
-    <button class="mob-sheet-close" onclick="closeMobSheet();closeEdit()">✕</button>
+    <span class="mob-sheet-title" id="sheetPlayerEditTitle">Spieler</span>
+    <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
   </div>
-  <div class="mob-sheet-body" style="padding-bottom:24px;">
-    <!-- Name + Nummer -->
-    <div class="row2" style="margin-bottom:12px;gap:8px;">
-      <div style="width:70px;flex:none;">
+  <div class="mob-sheet-body" style="padding:0 16px 28px;">
+
+    <!-- 1. Trikotfarbe (immer sichtbar oben) -->
+    <div style="margin-bottom:14px;">
+      <label class="lbl">Trikotfarbe</label>
+      <div class="colors" id="mobEpColors" style="flex-wrap:wrap;gap:10px;margin-top:8px;"></div>
+    </div>
+
+    <!-- 2. Kader-Spieler (gefiltert, große Cards) -->
+    <div id="mobEpRosterWrap">
+      <div id="mobEpRosterList"></div>
+    </div>
+
+    <!-- 3. Manuell eingeben -->
+    <hr class="mob-ep-divider">
+    <label class="lbl" style="display:block;margin-bottom:8px;">Manuell eingeben</label>
+    <div class="row2" style="gap:8px;margin-bottom:12px;">
+      <div style="width:72px;flex:none;">
         <label class="lbl">#</label>
         <input type="text" id="mobEpNum" placeholder="7" style="font-size:1rem;text-align:center;">
       </div>
       <div style="flex:1;">
         <label class="lbl">Name</label>
-        <input type="text" id="mobEpName" placeholder="Spielername" style="font-size:.95rem;">
+        <input type="text" id="mobEpName" placeholder="Spielername" style="font-size:.92rem;">
       </div>
     </div>
-    <!-- Trikotfarbe -->
-    <div style="margin-bottom:14px;">
-      <label class="lbl">Trikotfarbe</label>
-      <div class="colors" id="mobEpColors" style="flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
-    </div>
-    <!-- Kader-Spieler Liste -->
-    <div id="mobEpRosterWrap" style="margin-bottom:14px;">
-      <label class="lbl" style="margin-bottom:6px;display:block;">Aus Kader zuweisen</label>
-      <div id="mobEpRosterList" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;"></div>
-    </div>
-    <!-- Buttons -->
     <div style="display:flex;gap:8px;">
-      <button class="btn del" style="flex:0 0 auto;" onclick="mobPlayerDelete()">✕</button>
+      <button class="btn del" style="flex:0 0 auto;min-height:48px;padding:0 16px;" onclick="mobPlayerDelete()">✕</button>
       <button class="btn" style="flex:1;min-height:48px;" onclick="applyMobPlayerEdit()">✓ Speichern</button>
     </div>
   </div>
@@ -2094,53 +2115,118 @@ function selectPlayer(id) {
   renderPitch();
 }
 
-function openMobPlayerEdit(p) {
-  document.getElementById('sheetPlayerEditTitle').textContent = p.isGK ? 'Torwart' : 'Spieler ' + (p.num||'');
-  document.getElementById('mobEpNum').value = p.num||'';
-  document.getElementById('mobEpName').value = p.name||'';
+// ── Position helpers ──────────────────────────────
+function posGroup(pos, isGK) {
+  if(isGK) return 'gk';
+  if(!pos) return 'other';
+  const p = pos.toUpperCase();
+  if(/TW|GK/.test(p)) return 'gk';
+  if(/IV|LV|RV|CB|LB|RB|LIB|RIB|AB|DEF/.test(p)) return 'def';
+  if(/DM|ZM|CM|RM|LM|ZOM|MF|MIT/.test(p)) return 'mid';
+  if(/ST|LA|RA|LF|RF|CF|FW|ANG/.test(p)) return 'fwd';
+  return 'other';
+}
+function posLabel(pos, isGK) {
+  const g = posGroup(pos, isGK);
+  if(g==='gk')  return 'Torwart' + (pos?' · '+pos:'');
+  if(g==='def') return 'Verteidiger' + (pos?' · '+pos:'');
+  if(g==='mid') return 'Mittelfeld' + (pos?' · '+pos:'');
+  if(g==='fwd') return 'Angriff' + (pos?' · '+pos:'');
+  return pos ? 'Spieler · '+pos : 'Spieler';
+}
 
-  // Build kit color picker
+function openMobPlayerEdit(p) {
+  // Title
+  document.getElementById('sheetPlayerEditTitle').textContent = posLabel(p.pos, p.isGK);
+
+  // Pre-fill manual inputs
+  document.getElementById('mobEpNum').value  = p.num  || '';
+  document.getElementById('mobEpName').value = p.name || '';
+
+  // Kit color picker
   const colWrap = document.getElementById('mobEpColors');
   colWrap.innerHTML = '';
+  const curColor = p.color || KIT_COLORS[0];
   KIT_COLORS.forEach(c => {
     const d = document.createElement('div');
-    d.className = 'cpick' + (c === (p.color||KIT_COLORS[0]) ? ' sel' : '');
-    d.style.cssText = `background:${c};width:32px;height:32px;`;
+    d.className = 'cpick' + (c === curColor ? ' sel' : '');
+    d.style.cssText = `background:${c};width:34px;height:34px;`;
     d.dataset.c = c;
     d.onclick = () => { colWrap.querySelectorAll('.cpick').forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); };
     colWrap.appendChild(d);
   });
 
-  // Build roster list
+  // Roster picker cards
   const list = document.getElementById('mobEpRosterList');
   list.innerHTML = '';
   const rosterWrap = document.getElementById('mobEpRosterWrap');
+
   if(!roster.length) {
     rosterWrap.style.display = 'none';
   } else {
     rosterWrap.style.display = '';
-    roster.forEach(r => {
-      const item = document.createElement('div');
-      item.className = 'mob-field-player-item';
-      item.style.borderRadius = '8px';
-      item.innerHTML = `
-        <span class="mob-fpi-num">${r.num}</span>
-        <span class="mob-fpi-name">${r.name}</span>
-        <span class="mob-fpi-pos">${r.pos||'–'}</span>
-      `;
-      item.onclick = () => {
-        document.getElementById('mobEpNum').value = r.num;
+    const pGroup = posGroup(p.pos, p.isGK);
+
+    // Which players are already on the pitch (except current slot)
+    const usedNames = new Set(
+      players.filter(pl => pl.id !== p.id && pl.name)
+             .map(pl => pl.name.toLowerCase())
+    );
+
+    // Sort: same position group first, then rest
+    const sorted = [...roster].sort((a, b) => {
+      const am = posGroup(a.pos, false) === pGroup ? 0 : 1;
+      const bm = posGroup(b.pos, false) === pGroup ? 0 : 1;
+      return am - bm;
+    });
+
+    // "Kein Spieler" card
+    const noCard = document.createElement('div');
+    noCard.className = 'mob-rpc' + (!p.name ? ' rpc-selected' : '');
+    noCard.innerHTML = `
+      <div class="mob-rpc-dot" style="background:rgba(255,255,255,.1);font-size:1.3rem;">–</div>
+      <div class="mob-rpc-info">
+        <div class="mob-rpc-name" style="color:var(--gr);">Kein Spieler</div>
+        <div class="mob-rpc-pos">Position leeren</div>
+      </div>`;
+    noCard.onclick = () => {
+      document.getElementById('mobEpNum').value  = '';
+      document.getElementById('mobEpName').value = '';
+      applyMobPlayerEdit();
+    };
+    list.appendChild(noCard);
+
+    sorted.forEach(r => {
+      const isUsed    = usedNames.has(r.name.toLowerCase());
+      const isCurrent = p.name && p.name.toLowerCase() === r.name.toLowerCase();
+      const isMatch   = posGroup(r.pos, false) === pGroup;
+
+      const card = document.createElement('div');
+      card.className = 'mob-rpc'
+        + (isUsed && !isCurrent ? ' rpc-disabled' : '')
+        + (isCurrent ? ' rpc-selected' : '');
+
+      const dotColor = isCurrent ? (p.color||'var(--wh)') : 'var(--wh)';
+      card.innerHTML = `
+        <div class="mob-rpc-dot" style="background:${dotColor};">${r.num}</div>
+        <div class="mob-rpc-info">
+          <div class="mob-rpc-name">${r.name}</div>
+          <div class="mob-rpc-pos">${r.pos||'–'}</div>
+        </div>
+        ${isMatch   ? '<span class="mob-rpc-badge match">Passend</span>' : ''}
+        ${isCurrent ? '<span class="mob-rpc-badge current">Aktuell</span>' : ''}`;
+
+      card.onclick = () => {
+        // Instant assign: fill inputs then save
+        document.getElementById('mobEpNum').value  = r.num;
         document.getElementById('mobEpName').value = r.name;
-        // highlight selection
-        list.querySelectorAll('.mob-field-player-item').forEach(x=>x.style.background='');
-        item.style.background = 'var(--accbg)';
+        applyMobPlayerEdit();
       };
-      list.appendChild(item);
+      list.appendChild(card);
     });
   }
 
-  document.getElementById('mobOverlay').classList.add('show');
-  document.getElementById('sheetPlayerEdit').classList.add('open');
+  openMobSheet('sheetPlayerEdit');
 }
 
 function applyMobPlayerEdit() {
@@ -3483,11 +3569,14 @@ function openMobSheet(id) {
 }
 
 function closeMobSheet(resetNav=true) {
+  // If player-edit sheet was open, clear selection
+  const playerSheetOpen = document.getElementById('sheetPlayerEdit')?.classList.contains('open');
   document.querySelectorAll('.mob-sheet').forEach(s=>s.classList.remove('open'));
   document.getElementById('mobOverlay').classList.remove('show');
+  if(playerSheetOpen) { selId = null; renderPitch(); }
   if(resetNav) {
     document.querySelectorAll('.mnb').forEach(b=>b.classList.remove('active'));
-    const fn = document.getElementById('mnb-field');
+    const fn = document.getElementById('mnb-lineup');
     if(fn) fn.classList.add('active');
   }
 }
