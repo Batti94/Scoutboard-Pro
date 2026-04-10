@@ -2335,6 +2335,7 @@ function removePlayer() {
 // DRAG & DROP
 // ===================================================
 let dragStartPos = null;
+let dragTouchStart = null; // track touch origin to detect tap vs drag
 let selArrowIdx = null;
 let dragOverBench = false;
 
@@ -2364,7 +2365,6 @@ function startDrag(e,id) {
 }
 function startDragTouch(e,id) {
   e.preventDefault();
-  saveHistory();
   dragId=id;
   dragOverBench=false;
   const pitch=document.getElementById('pitch');
@@ -2374,6 +2374,7 @@ function startDragTouch(e,id) {
   const t=e.touches[0];
   dragOff={x:t.clientX-rect.left-p.x*rect.width, y:t.clientY-rect.top-p.y*rect.height};
   dragStartPos={x:p.x, y:p.y};
+  dragTouchStart={x:t.clientX, y:t.clientY};
   document.addEventListener('touchmove',onDragMoveT,{passive:false});
   document.addEventListener('touchend',onDragEndT);
 }
@@ -2418,14 +2419,35 @@ function onDragEnd(e){
 function onDragEndT(e){
   const inner = document.getElementById('subBench');
   if(inner) { inner.style.outline=''; inner.style.outlineOffset=''; }
+
+  // Detect tap vs drag (threshold: 9px)
+  const t = e.changedTouches[0];
+  const moved = dragTouchStart
+    ? Math.abs(t.clientX - dragTouchStart.x) + Math.abs(t.clientY - dragTouchStart.y)
+    : 999;
+  const wasTap = moved < 9;
+
   if(dragId && dragStartPos) {
+    if(wasTap && isMobile()) {
+      // Tap: restore position, open player editor
+      const tapId = dragId;
+      const p = getActivePlayer(tapId);
+      if(p) { p.x = dragStartPos.x; p.y = dragStartPos.y; }
+      dragId=null; dragStartPos=null; dragOverBench=false; dragTouchStart=null;
+      document.removeEventListener('touchmove',onDragMoveT);
+      document.removeEventListener('touchend',onDragEndT);
+      saveHistory();
+      selectPlayer(tapId);
+      return;
+    }
+    saveHistory();
     if(dragOverBench) {
       dropPlayerToBench(dragId, dragStartPos);
     } else {
       maybeSwapPlayers(dragId, dragStartPos);
     }
   }
-  dragId=null; dragStartPos=null; dragOverBench=false;
+  dragId=null; dragStartPos=null; dragOverBench=false; dragTouchStart=null;
   document.removeEventListener('touchmove',onDragMoveT);
   document.removeEventListener('touchend',onDragEndT);
 }
