@@ -179,41 +179,110 @@ textarea{resize:vertical;min-height:70px;}
 .badge-lg.rc{background:var(--red);color:#fff;}
 .no-data{color:var(--gr);font-size:.85rem;text-align:center;padding:30px;}
 
+/* ── MOBILE COMPONENTS (hidden on desktop) ── */
+.mob-hdr-extra{display:none;align-items:center;gap:6px;margin-left:auto;}
+.mob-roster-sel{background:rgba(255,255,255,.06);border:1px solid var(--pb);color:var(--wh);padding:6px 8px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.76rem;max-width:140px;outline:none;}
+.mob-roster-sel option{background:var(--gd);}
+.mob-save-btn{background:var(--acc);color:var(--gd);border:none;padding:8px 14px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer;white-space:nowrap;min-height:38px;flex-shrink:0;}
+
+/* Mob roster bar inside pitch-center */
+.mob-roster-bar{display:none;background:var(--gd);border-bottom:1px solid var(--pb);padding:8px 10px;gap:8px;align-items:center;flex-shrink:0;}
+
+/* Mob main views (Subs + Stats) */
+.mob-main-view{display:none;flex-direction:column;overflow-y:auto;padding:12px 12px 80px;}
+
+/* Bench cards */
+.mob-bench-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mob-bench-card{background:rgba(255,255,255,.05);border:1px solid var(--pb);border-radius:12px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:120px;position:relative;}
+.mob-bench-card.linked{border-color:#27ae60;background:rgba(39,174,96,.07);}
+.mob-bench-card-num{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--acc);line-height:1;}
+.mob-bench-card-name{font-size:.8rem;font-weight:600;text-align:center;color:var(--wh);line-height:1.2;}
+.mob-bench-card-pos{font-size:.65rem;color:var(--gr);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:10px;}
+.mob-bench-card-link{font-size:.65rem;color:#27ae60;text-align:center;margin-top:2px;}
+.mob-bench-swap-btn{background:rgba(255,255,255,.08);border:1px solid var(--pb);color:var(--wh);border-radius:7px;padding:7px 10px;font-size:.73rem;font-weight:600;cursor:pointer;width:100%;margin-top:auto;min-height:36px;transition:all .15s;}
+.mob-bench-swap-btn.active-link{background:rgba(39,174,96,.15);border-color:#27ae60;color:#27ae60;}
+.mob-bench-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--gr);font-size:.9rem;cursor:pointer;padding:2px;min-height:28px;min-width:28px;display:flex;align-items:center;justify-content:center;}
+.mob-add-sub-btn{background:rgba(255,255,255,.06);border:1px dashed var(--pb);color:var(--gr);border-radius:12px;padding:20px;font-size:.85rem;cursor:pointer;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .18s;}
+.mob-add-sub-btn:hover{background:rgba(255,255,255,.1);border-color:var(--acc);}
+
+/* Field player selector sheet */
+.mob-field-player-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--pb);cursor:pointer;min-height:54px;transition:background .15s;}
+.mob-field-player-item:active,.mob-field-player-item:hover{background:var(--accbg);}
+.mob-fpi-num{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--acc);min-width:28px;}
+.mob-fpi-name{font-size:.88rem;font-weight:600;flex:1;}
+.mob-fpi-pos{font-size:.68rem;color:var(--gr);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:8px;}
+
+/* Mob stats cards */
+.mob-stat-card{background:rgba(255,255,255,.04);border:1px solid var(--pb);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;}
+.mob-stat-info{flex:1;min-width:0;}
+.mob-stat-name{font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mob-stat-pos{font-size:.66rem;color:var(--gr);margin-top:1px;}
+.mob-stat-controls{display:flex;flex-direction:column;gap:3px;}
+.mob-stat-row-ctrl{display:flex;align-items:center;gap:5px;}
+.mob-stat-icon{font-size:.7rem;min-width:14px;text-align:center;}
+.mob-stat-minus{width:30px;height:30px;border-radius:6px;border:none;background:rgba(255,255,255,.08);color:var(--wh);font-size:1.1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mob-stat-plus{width:30px;height:30px;border-radius:6px;border:none;font-size:1.1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mob-stat-val{font-family:'Bebas Neue',sans-serif;font-size:1rem;min-width:18px;text-align:center;}
+
+/* Mob section titles */
+.mob-sec-title{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.1em;color:var(--gr);margin:12px 0 8px;}
+.mob-sec-title:first-child{margin-top:0;}
+
 /* ── MOBILE ── */
 @media(max-width:700px){
 
-  /* hide desktop sidebars */
+  /* sidebars hidden */
   .lsb,.rsb{display:none!important;}
 
-  /* header: just logo + tabs */
-  header{padding:8px 12px;gap:6px;}
-  .logo{font-size:1.2rem;}
+  /* header */
+  header{padding:8px 10px;gap:6px;flex-wrap:nowrap;}
+  .logo{font-size:1.15rem;flex-shrink:0;}
   .hsep{display:none;}
   .hbtn{display:none;}
-  .tab-bar{flex:1;}
-  .tab{padding:5px 10px;font-size:.75rem;}
+  .tab-bar{display:none!important;}
+  .mob-hdr-extra{display:flex!important;}
 
-  /* pitch fills screen */
-  .pitch-center{padding:8px 8px 100px 8px;}
+  /* lineup view: vertical stack, each sub-view fills it */
+  #viewLineup{flex-direction:column;overflow:hidden;}
+
+  /* pitch-center: scrollable fill */
+  .pitch-center{flex:1;overflow-y:auto;padding:0 0 72px;display:flex;flex-direction:column;}
+
+  /* mob roster bar visible */
+  .mob-roster-bar{display:flex!important;}
+
+  /* bigger view toggle */
+  #btnStart,#btnEnd,#btnCombined{padding:10px 18px!important;font-size:.88rem!important;min-height:44px!important;}
+
+  /* pitch fills width */
   .pitch-wrap{width:100%;max-width:100%;}
-  .pitch-header .team-name{font-size:1.1rem;}
+  .pitch-header .team-name{font-size:1.05rem;}
+  .pitch-outer{padding:18px 22px;}
 
-  /* sub zone full width */
-  #subZone{width:100%!important;max-width:100%!important;}
+  /* hide desktop sub-zone on mobile (subs tab handles it) */
+  #subZone{display:none!important;}
 
-  /* BOTTOM NAV */
+  /* mob main views fill space */
+  .mob-main-view{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:12px 12px 80px;}
+  .mob-main-view.mob-hidden{display:none!important;}
+
+  /* bottom nav */
   .mob-nav{display:flex!important;}
-
-  /* MOBILE SHEETS */
   .mob-sheet{display:flex!important;}
 
-  /* edit panel mobile */
-  .edit-panel{padding:10px 14px 20px;gap:8px;overflow-y:auto;max-height:75vh;}
-  .ep-field input{width:100px;}
+  /* edit panel as bottom sheet */
+  .edit-panel{padding:10px 16px 28px;gap:10px;overflow-y:auto;max-height:82vh;border-radius:14px 14px 0 0;}
+  .ep-field input{width:100%;}
+  .ep-field input.sm{width:70px;}
+  .ep-field{flex:1;min-width:120px;}
+  .btn{min-height:44px;padding:10px 16px;}
 
-  /* stats/saved views */
-  #viewStats,#viewSaved{padding:12px;}
+  /* saved/stats views */
+  #viewStats,#viewSaved{padding:12px 12px 80px;}
   .stats-table th,.stats-table td{padding:6px 8px;font-size:.78rem;}
+
+  /* hint text below pitch */
+  .pitch-hint{display:none;}
 }
 
 /* BOTTOM NAV — hidden on desktop */
@@ -301,6 +370,13 @@ textarea{resize:vertical;min-height:70px;}
   <button class="hbtn sec" onclick="exportBackup()" title="Alle Daten sichern">⬇ Backup</button>
   <button class="hbtn sec" onclick="triggerRestore()" title="Backup wiederherstellen">⬆ Restore</button>
   <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="importBackup(event)">
+  <!-- mobile: roster select + save button in header -->
+  <div class="mob-hdr-extra">
+    <select class="mob-roster-sel" id="rosterSelectMobHdr" onchange="loadSavedRoster(this.value)">
+      <option value="">– Kader –</option>
+    </select>
+    <button class="mob-save-btn" onclick="saveNow('mob');showToast('✓ Gespeichert')">💾</button>
+  </div>
 </header>
 
 <!-- LINEUP VIEW -->
@@ -335,6 +411,13 @@ textarea{resize:vertical;min-height:70px;}
 
   <!-- PITCH -->
   <div class="pitch-center">
+    <!-- Mobile: roster select bar (desktop uses rsb dropdown) -->
+    <div class="mob-roster-bar" id="mobRosterBar">
+      <select class="mob-roster-sel" id="rosterSelectMob" style="flex:1;" onchange="loadSavedRoster(this.value)">
+        <option value="">– Kein Kader –</option>
+      </select>
+      <button class="mob-save-btn" onclick="saveLineup();showToast('Aufstellung gespeichert')">💾 Speichern</button>
+    </div>
     <div class="pitch-header">
       <div class="team-name" id="dTeam">Mein Team</div>
       <div class="match-info" id="dMatch">–</div>
@@ -382,7 +465,7 @@ textarea{resize:vertical;min-height:70px;}
           <!-- players injected by JS -->
         </div>
       </div>
-      <div style="font-size:.68rem;color:var(--gr);text-align:center;margin-top:6px;">Spieler ziehen → Pfeil wird automatisch gezeichnet · Pfeil antippen → nochmal tippen zum Löschen</div>
+      <div class="pitch-hint" style="font-size:.68rem;color:var(--gr);text-align:center;margin-top:6px;">Spieler ziehen → Pfeil wird automatisch gezeichnet · Pfeil antippen → nochmal tippen zum Löschen</div>
     </div>
     <!-- BENCH -->
     <div class="sub-zone" id="subZone" style="width:100%;max-width:520px;margin-top:10px;border-radius:7px;">
@@ -396,6 +479,23 @@ textarea{resize:vertical;min-height:70px;}
         ondrop="onDropToBench(event);this.style.outline='';this.style.outlineOffset='';">
       </div>
     </div>
+  </div>
+
+  <!-- MOBILE: AUSWECHSLUNGEN TAB -->
+  <div class="mob-main-view mob-hidden" id="mobViewSubs">
+    <div class="mob-sec-title">Auswechselspieler</div>
+    <div class="mob-bench-grid" id="mobBenchCards"></div>
+    <div style="margin-top:4px;">
+      <button class="mob-add-sub-btn" style="width:100%;" onclick="mobAddSubSlot()">
+        <span style="font-size:1.4rem;color:var(--acc);">＋</span>
+        <span style="font-size:.8rem;">Auswechselspieler hinzufügen</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MOBILE: STATISTIKEN TAB -->
+  <div class="mob-main-view mob-hidden" id="mobViewStats">
+    <div id="mobStatsContent"></div>
   </div>
 
   <!-- RIGHT -->
@@ -570,25 +670,21 @@ textarea{resize:vertical;min-height:70px;}
 <!-- MOBILE BOTTOM NAV -->
 <nav class="mob-nav">
   <div class="mob-nav-inner">
-    <button class="mnb active" id="mnb-field" onclick="mobNav('field')">
-      <span class="mnb-icon">🟩</span>
-      <span class="mnb-label">Feld</span>
+    <button class="mnb active" id="mnb-lineup" onclick="mobNav('lineup')">
+      <span class="mnb-icon">⚽</span>
+      <span class="mnb-label">Aufstellung</span>
     </button>
-    <button class="mnb" id="mnb-formation" onclick="mobNav('formation')">
-      <span class="mnb-icon">⚙️</span>
-      <span class="mnb-label">Formation</span>
+    <button class="mnb" id="mnb-subs" onclick="mobNav('subs')">
+      <span class="mnb-icon">↕</span>
+      <span class="mnb-label">Wechsel</span>
     </button>
-    <button class="mnb" id="mnb-roster" onclick="mobNav('roster')">
-      <span class="mnb-icon">👥</span>
-      <span class="mnb-label">Kader</span>
+    <button class="mnb" id="mnb-stats" onclick="mobNav('stats')">
+      <span class="mnb-icon">📊</span>
+      <span class="mnb-label">Statistiken</span>
     </button>
-    <button class="mnb" id="mnb-tools" onclick="mobNav('tools')">
-      <span class="mnb-icon">🛠</span>
-      <span class="mnb-label">Tools</span>
-    </button>
-    <button class="mnb" id="mnb-info" onclick="mobNav('info')">
-      <span class="mnb-icon">📋</span>
-      <span class="mnb-label">Info</span>
+    <button class="mnb" id="mnb-archive" onclick="mobNav('archive')">
+      <span class="mnb-icon">📁</span>
+      <span class="mnb-label">Archiv</span>
     </button>
   </div>
 </nav>
@@ -644,6 +740,37 @@ textarea{resize:vertical;min-height:70px;}
     <button class="btn sec" style="width:100%" onclick="saveLineup();closeMobSheet()">💾 Aufstellung speichern</button>
     <button class="btn sec" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="showView('saved');closeMobSheet()">📁 Archiv</button>
     <button class="btn sec" style="width:100%" onclick="closeMobSheet();openExportModal()">📷 Export</button>
+  </div>
+</div>
+
+<!-- SHEET: SUB SWAP – Feldspiele auswählen -->
+<div class="mob-sheet" id="sheetSubSwap">
+  <div class="mob-sheet-handle"></div>
+  <div class="mob-sheet-header">
+    <span class="mob-sheet-title" id="sheetSubSwapTitle">Einwechseln für…</span>
+    <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
+  </div>
+  <div class="mob-sheet-body" style="padding:0 0 16px;">
+    <div id="subSwapList"></div>
+  </div>
+</div>
+
+<!-- SHEET: ADD SUB PLAYER -->
+<div class="mob-sheet" id="sheetAddSub">
+  <div class="mob-sheet-handle"></div>
+  <div class="mob-sheet-header">
+    <span class="mob-sheet-title">Auswechselspieler</span>
+    <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
+  </div>
+  <div class="mob-sheet-body">
+    <div class="field-col" style="gap:10px;">
+      <div class="row2">
+        <div style="width:60px;flex:none;"><label class="lbl">#</label><input type="text" id="subAddNum" placeholder="7"></div>
+        <div style="width:70px;flex:none;"><label class="lbl">Pos</label><input type="text" id="subAddPos" placeholder="ST"></div>
+        <div style="flex:1;"><label class="lbl">Name</label><input type="text" id="subAddName" placeholder="Nachname"></div>
+      </div>
+      <button class="btn" style="width:100%;min-height:48px;" onclick="mobConfirmAddSub()">+ Hinzufügen</button>
+    </div>
   </div>
 </div>
 
@@ -1024,6 +1151,19 @@ function showView(v) {
   const idx = ['lineup','saved'].indexOf(v);
   if(tabs[idx]) tabs[idx].classList.add('active');
   if(v==='saved') renderSavedView();
+  // sync mobile bottom nav state
+  if(isMobile()) {
+    document.querySelectorAll('.mnb').forEach(b=>b.classList.remove('active'));
+    if(v==='saved') { const a=document.getElementById('mnb-archive'); if(a)a.classList.add('active'); }
+    else if(v==='lineup') { const a=document.getElementById('mnb-lineup'); if(a)a.classList.add('active'); }
+    // restore pitch visibility when switching back to lineup
+    if(v==='lineup') {
+      const pc=document.querySelector('.pitch-center');
+      if(pc) pc.style.display='';
+      const ms=document.getElementById('mobViewSubs'); if(ms) ms.classList.add('mob-hidden');
+      const mst=document.getElementById('mobViewStats'); if(mst) mst.classList.add('mob-hidden');
+    }
+  }
 }
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 
@@ -1641,6 +1781,13 @@ function renderAll() {
   renderRoster();
   renderSubs();
   updateMatchDisplay();
+  // refresh mob views if visible
+  if(isMobile()) {
+    const mobSubs = document.getElementById('mobViewSubs');
+    const mobStats = document.getElementById('mobViewStats');
+    if(mobSubs && !mobSubs.classList.contains('mob-hidden')) renderMobBench();
+    if(mobStats && !mobStats.classList.contains('mob-hidden')) renderMobStats();
+  }
 }
 
 // ===================================================
@@ -1753,15 +1900,17 @@ function deleteSavedRoster(id) {
 }
 
 function updateRosterSelect() {
-  const sel = document.getElementById('rosterSelect');
-  if(!sel) return;
-  sel.innerHTML = '<option value="">– Kein Kader –</option>';
-  savedRosters.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id;
-    opt.textContent = r.name;
-    opt.selected = (r.id === curRosterId);
-    sel.appendChild(opt);
+  ['rosterSelect','rosterSelectMob','rosterSelectMobHdr'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    if(!sel) return;
+    sel.innerHTML = '<option value="">– Kein Kader –</option>';
+    savedRosters.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.id;
+      opt.textContent = r.name;
+      opt.selected = (r.id === curRosterId);
+      sel.appendChild(opt);
+    });
   });
 }
 
@@ -3167,16 +3316,49 @@ function showToast(msg){
 function isMobile(){ return window.innerWidth <= 700; }
 
 function mobNav(tab) {
-  // update active state
   document.querySelectorAll('.mnb').forEach(b=>b.classList.remove('active'));
   const btn = document.getElementById('mnb-'+tab);
   if(btn) btn.classList.add('active');
 
-  if(tab==='field') { closeMobSheet(); return; }
-  if(tab==='formation') openMobSheet('sheetFormation');
-  if(tab==='roster') { renderRosterMob(); openMobSheet('sheetRoster'); }
-  if(tab==='tools') openMobSheet('sheetTools');
-  if(tab==='info') { syncInfoToMob(); openMobSheet('sheetInfo'); }
+  closeMobSheet();
+
+  const pitchCenter = document.querySelector('.pitch-center');
+  const mobSubs = document.getElementById('mobViewSubs');
+  const mobStats = document.getElementById('mobViewStats');
+
+  if(tab==='lineup') {
+    // ensure lineup view is active
+    if(!document.getElementById('viewLineup').classList.contains('active')) {
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      document.getElementById('viewLineup').classList.add('active');
+    }
+    if(pitchCenter) pitchCenter.style.display='';
+    if(mobSubs) mobSubs.classList.add('mob-hidden');
+    if(mobStats) mobStats.classList.add('mob-hidden');
+  } else if(tab==='subs') {
+    if(!document.getElementById('viewLineup').classList.contains('active')) {
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      document.getElementById('viewLineup').classList.add('active');
+    }
+    if(pitchCenter) pitchCenter.style.display='none';
+    if(mobSubs) mobSubs.classList.remove('mob-hidden');
+    if(mobStats) mobStats.classList.add('mob-hidden');
+    renderMobBench();
+  } else if(tab==='stats') {
+    if(!document.getElementById('viewLineup').classList.contains('active')) {
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      document.getElementById('viewLineup').classList.add('active');
+    }
+    if(pitchCenter) pitchCenter.style.display='none';
+    if(mobSubs) mobSubs.classList.add('mob-hidden');
+    if(mobStats) mobStats.classList.remove('mob-hidden');
+    renderMobStats();
+  } else if(tab==='archive') {
+    if(pitchCenter) pitchCenter.style.display='';
+    if(mobSubs) mobSubs.classList.add('mob-hidden');
+    if(mobStats) mobStats.classList.add('mob-hidden');
+    showView('saved');
+  }
 }
 
 function openMobSheet(id) {
@@ -3234,6 +3416,185 @@ function renderRosterMob() {
 
     list.appendChild(item);
   });
+}
+
+// ===================================================
+// MOBILE BENCH CARDS
+// ===================================================
+function renderMobBench() {
+  const grid = document.getElementById('mobBenchCards');
+  if(!grid) return;
+  grid.innerHTML = '';
+  if(!subs.length) return;
+  subs.forEach(s => {
+    const linked = players.find(p => p.id === s.subForId);
+    const card = document.createElement('div');
+    card.className = 'mob-bench-card' + (linked ? ' linked' : '');
+    const dotBg = s.color || 'var(--wh)';
+    card.innerHTML = `
+      <button class="mob-bench-del" onclick="mobRemoveSub(${s.id})" title="Entfernen">✕</button>
+      <div style="width:44px;height:44px;border-radius:50%;background:${dotBg};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gd);flex-shrink:0;border:2px solid rgba(255,255,255,.7);">${s.num||'?'}</div>
+      <div class="mob-bench-card-name">${s.name||'–'}</div>
+      <div class="mob-bench-card-pos">${s.pos||'–'}</div>
+      ${linked ? `<div class="mob-bench-card-link">⇄ ${linked.name||'#'+linked.num}</div>` : ''}
+      <button class="mob-bench-swap-btn ${linked?'active-link':''}" onclick="openSubSwapSheet(${s.id})">
+        ${linked ? '⇄ Ändern' : '⇄ Einwechseln'}
+      </button>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+let pendingSubSwapId = null;
+
+function openSubSwapSheet(subId) {
+  pendingSubSwapId = subId;
+  const sub = subs.find(s => s.id === subId);
+  if(!sub) return;
+  const title = document.getElementById('sheetSubSwapTitle');
+  const list = document.getElementById('subSwapList');
+  if(title) title.textContent = `${sub.num} ${sub.name} — einwechseln für:`;
+  list.innerHTML = '';
+  const fieldPlayers = players.filter(p => p.name);
+  if(!fieldPlayers.length) {
+    list.innerHTML = '<div style="color:var(--gr);padding:20px 16px;text-align:center;font-size:.85rem;">Keine Spieler auf dem Feld</div>';
+  } else {
+    fieldPlayers.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'mob-field-player-item';
+      const isCurrent = p.id === sub.subForId;
+      const dotBg = p.color || 'var(--wh)';
+      item.innerHTML = `
+        <div style="width:36px;height:36px;border-radius:50%;background:${dotBg};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:var(--gd);flex-shrink:0;">${p.num||'?'}</div>
+        <span class="mob-fpi-name">${p.name}</span>
+        <span class="mob-fpi-pos">${p.pos||'–'}</span>
+        ${isCurrent ? '<span style="color:#27ae60;font-size:.75rem;font-weight:700;">✓</span>' : ''}
+      `;
+      item.onclick = () => {
+        if(isCurrent) { sub.subForId = null; }
+        else { sub.subForId = p.id; }
+        closeMobSheet();
+        renderMobBench();
+        renderSubs();
+        saveStorage();
+        showToast(isCurrent ? 'Verknüpfung entfernt' : `${sub.name} ⇄ ${p.name}`);
+      };
+      list.appendChild(item);
+    });
+  }
+  openMobSheet('sheetSubSwap');
+}
+
+function mobRemoveSub(subId) {
+  subs = subs.filter(s => s.id !== subId);
+  renderSubs();
+  renderMobBench();
+  saveStorage();
+  showToast('Spieler entfernt');
+}
+
+function mobAddSubSlot() {
+  document.getElementById('subAddNum').value = '';
+  document.getElementById('subAddPos').value = '';
+  document.getElementById('subAddName').value = '';
+  openMobSheet('sheetAddSub');
+  setTimeout(() => document.getElementById('subAddName').focus(), 350);
+}
+
+function mobConfirmAddSub() {
+  const num = document.getElementById('subAddNum').value.trim();
+  const pos = document.getElementById('subAddPos').value.trim();
+  const name = document.getElementById('subAddName').value.trim();
+  if(!name) { showToast('Bitte Name eingeben'); return; }
+  subs.push({id:nextSubId++, num:num||'?', name, pos:pos||'–', color:'#f0f0eb', goals:0, assists:0, yellow:0, red:0, subForId:null});
+  closeMobSheet();
+  renderSubs();
+  renderMobBench();
+  saveStorage();
+  showToast(name+' hinzugefügt');
+}
+
+// ===================================================
+// MOBILE STATS VIEW
+// ===================================================
+function renderMobStats() {
+  const wrap = document.getElementById('mobStatsContent');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  const fieldPlayers = players.filter(p => p.name);
+  const subPlayers = subs.filter(s => s.name);
+  if(!fieldPlayers.length && !subPlayers.length) {
+    wrap.innerHTML = '<div style="color:var(--gr);text-align:center;padding:30px 0;font-size:.85rem;">Keine Spieler vorhanden</div>';
+    return;
+  }
+  if(fieldPlayers.length) {
+    const hdr = document.createElement('div');
+    hdr.className = 'mob-sec-title';
+    hdr.textContent = 'Startelf';
+    wrap.appendChild(hdr);
+    fieldPlayers.forEach(p => wrap.appendChild(buildMobStatCard(p, false)));
+  }
+  if(subPlayers.length) {
+    const hdr = document.createElement('div');
+    hdr.className = 'mob-sec-title';
+    hdr.style.marginTop = '16px';
+    hdr.textContent = 'Auswechslungen';
+    wrap.appendChild(hdr);
+    subPlayers.forEach(s => wrap.appendChild(buildMobStatCard(s, true)));
+  }
+}
+
+function buildMobStatCard(p, isSub) {
+  const card = document.createElement('div');
+  card.className = 'mob-stat-card';
+  card.style.marginBottom = '8px';
+  const dotBg = p.color || 'var(--wh)';
+  card.innerHTML = `
+    <div style="width:40px;height:40px;border-radius:50%;background:${dotBg};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gd);flex-shrink:0;border:2px solid rgba(255,255,255,.5);">${p.num||'?'}</div>
+    <div class="mob-stat-info">
+      <div class="mob-stat-name">${p.name}</div>
+      <div class="mob-stat-pos">${isSub ? '↕ Ersatz' : (p.pos||'–')}</div>
+    </div>
+    <div class="mob-stat-controls">
+      ${buildStatRow(p, isSub, 'goals',   '⚽', '#27ae60', '#1e6b40')}
+      ${buildStatRow(p, isSub, 'assists', '🅰', '#2980b9', '#1a4d7a')}
+      ${buildStatRow(p, isSub, 'yellow',  '🟨', '#c9a020', '#7a6010')}
+      ${buildStatRow(p, isSub, 'red',     '🟥', '#c03030', '#7a2020')}
+    </div>
+  `;
+  return card;
+}
+
+function buildStatRow(p, isSub, stat, icon, plusColor, minusColor) {
+  const val = p[stat] || 0;
+  const type = isSub ? 'sub' : 'field';
+  return `
+    <div class="mob-stat-row-ctrl">
+      <span class="mob-stat-icon">${icon}</span>
+      <button class="mob-stat-minus" style="background:${minusColor};" onclick="mobAdjStat('${type}',${p.id},'${stat}',-1)">−</button>
+      <span class="mob-stat-val" id="mst-${type}-${p.id}-${stat}">${val}</span>
+      <button class="mob-stat-plus" style="background:${plusColor}20;color:${plusColor};" onclick="mobAdjStat('${type}',${p.id},'${stat}',1)">+</button>
+    </div>
+  `;
+}
+
+function mobAdjStat(type, id, stat, delta) {
+  if(type==='field') {
+    const p = players.find(pl => pl.id === id);
+    if(!p) return;
+    p[stat] = Math.max(0, (p[stat]||0) + delta);
+    const el = document.getElementById(`mst-field-${id}-${stat}`);
+    if(el) el.textContent = p[stat];
+    renderPitch();
+  } else {
+    const s = subs.find(sb => sb.id === id);
+    if(!s) return;
+    s[stat] = Math.max(0, (s[stat]||0) + delta);
+    const el = document.getElementById(`mst-sub-${id}-${stat}`);
+    if(el) el.textContent = s[stat];
+    renderSubs();
+  }
+  saveStorage();
 }
 
 function addRosterMob() {
