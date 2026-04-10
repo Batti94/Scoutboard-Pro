@@ -2711,19 +2711,23 @@ function renderStats() {
 // SUPABASE
 // ===================================================
 const SUPABASE_URL = 'https://gsdjbxxwqagwbmnplhyv.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_571zY64p8tJDyYVJ65lFjQ_BIcsqTkq';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzZGpieHh3cWFnd2JtbnBsaHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MDAwNDgsImV4cCI6MjA5MTM3NjA0OH0.8zXJfg-6KmsD3mRq_kMtzoPFbD9j6zqyRPOraaP51bg';
 const SB_TABLE = 'scoutboard_data';
 const SB_KEY = 'main';
 const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+console.log('Supabase client initialized:', sbClient);
 
 async function saveToSupabase(json) {
   try {
     const { error } = await sbClient
       .from(SB_TABLE)
       .upsert({ key: SB_KEY, data: json, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase save error:', error);
+      throw error;
+    }
   } catch(e) {
-    console.warn('Supabase save error:', e);
+    console.error('Supabase save exception:', e);
   }
 }
 
