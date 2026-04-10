@@ -2721,7 +2721,7 @@ async function saveToSupabase(json) {
   try {
     const { error } = await sbClient
       .from(SB_TABLE)
-      .upsert({ key: SB_KEY, data: json, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      .upsert({ key: SB_KEY, data: json }, { onConflict: 'key' });
     if (error) {
       console.error('Supabase save error:', error);
       throw error;
@@ -2737,7 +2737,7 @@ async function loadFromSupabase() {
       .from(SB_TABLE)
       .select('data')
       .eq('key', SB_KEY)
-      .single();
+      .maybeSingle();
     if (error) throw error;
     return data?.data || null;
   } catch(e) {
