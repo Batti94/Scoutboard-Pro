@@ -359,6 +359,40 @@ textarea{resize:vertical;min-height:70px;}
 .toast{position:fixed;top:64px;right:18px;background:var(--acc);color:var(--gd);padding:9px 16px;border-radius:6px;font-weight:600;font-size:.82rem;opacity:0;transform:translateY(-8px);transition:all .28s;z-index:200;pointer-events:none;}
 .toast.show{opacity:1;transform:translateY(0);}
 
+/* ── ARCHIVE CARDS ── */
+.archive-tabs-wrap{display:flex;background:rgba(0,0,0,.3);border-radius:8px;padding:3px;margin-bottom:16px;gap:2px;flex-shrink:0;}
+.archive-tab{flex:1;text-align:center;padding:8px 12px;border-radius:6px;font-size:.83rem;font-weight:600;cursor:pointer;color:var(--gr);transition:all .18s;white-space:nowrap;border:none;background:none;font-family:'DM Sans',sans-serif;}
+.archive-tab.active{background:var(--acc);color:var(--gd);}
+.archive-tab:hover:not(.active){color:var(--wh);}
+.archive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;align-content:start;}
+.archive-card{background:var(--gd);border:1px solid var(--pb);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:border-color .18s,background .18s;-webkit-tap-highlight-color:transparent;}
+.archive-card:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.02);}
+.archive-card.current-card{border-color:var(--acc);}
+.ac-team{font-family:'Bebas Neue',sans-serif;font-size:1.45rem;letter-spacing:.07em;line-height:1.1;color:var(--wh);}
+.ac-formation{display:inline-block;background:var(--accbg);border:1px solid rgba(232,200,74,.25);color:var(--acc);font-family:'Bebas Neue',sans-serif;font-size:.82rem;letter-spacing:.06em;padding:1px 8px;border-radius:4px;margin-top:4px;}
+.ac-meta{font-size:.74rem;color:var(--gr);display:flex;flex-wrap:wrap;gap:3px 10px;align-items:center;}
+.ac-players{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;}
+.ac-chip{background:rgba(255,255,255,.06);padding:2px 7px;border-radius:4px;font-size:.71rem;color:var(--wh);}
+.ac-chip.more{color:var(--gr);background:transparent;}
+.ac-actions{display:flex;gap:8px;margin-top:4px;}
+.ac-actions .btn{min-height:40px;flex:1;font-size:.79rem;padding:0;}
+@media(max-width:700px){
+  #viewSaved{padding:10px 10px 80px!important;}
+  .archive-grid{grid-template-columns:1fr;}
+  .archive-card{padding:14px;}
+  .ac-actions .btn{min-height:48px;}
+}
+
+/* ── RATING ── */
+.rating-badge{position:absolute;bottom:-5px;right:-5px;width:16px;height:16px;border-radius:50%;font-size:.5rem;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.7);border:1.5px solid rgba(0,0,0,.35);pointer-events:none;z-index:2;}
+.rating-btn-row{display:flex;flex-wrap:wrap;gap:3px;}
+.rating-btn{min-width:26px;height:28px;border-radius:6px;border:1px solid var(--pb);background:rgba(255,255,255,.06);color:var(--gr);font-size:.77rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .14s;flex:1;}
+.rating-btn:hover{background:rgba(255,255,255,.13);color:var(--wh);}
+.rating-btn.sel{border-color:transparent;color:#0a1a0f;}
+.mob-rating-btn{flex:1;min-width:0;height:48px;border-radius:8px;border:1px solid var(--pb);background:rgba(255,255,255,.06);color:var(--gr);font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .13s;-webkit-tap-highlight-color:transparent;}
+.mob-rating-btn:active{background:rgba(255,255,255,.18);}
+.mob-rating-btn.sel{border-color:transparent;color:#0a1a0f;}
+
 /* scrollbar */
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -397,9 +431,6 @@ textarea{resize:vertical;min-height:70px;}
   <button class="hbtn" onclick="undo()">↩ Undo</button>
   <button class="hbtn" onclick="resetLineup()">↺ Reset</button>
   <button class="hbtn" onclick="saveLineup()">💾 Speichern</button>
-  <button class="hbtn sec" onclick="exportBackup()" title="Alle Daten sichern">⬇ Backup</button>
-  <button class="hbtn sec" onclick="triggerRestore()" title="Backup wiederherstellen">⬆ Restore</button>
-  <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="importBackup(event)">
   <!-- mobile: roster select + kit color + save button in header -->
   <div class="mob-hdr-extra">
     <select class="mob-roster-sel" id="rosterSelectMobHdr" onchange="loadSavedRoster(this.value)">
@@ -593,17 +624,15 @@ textarea{resize:vertical;min-height:70px;}
 </div>
 
 <!-- SAVED VIEW -->
-<div class="view" id="viewSaved">
-  <div class="stats-header" style="display:flex;align-items:center;justify-content:space-between;">
-    <span>Archiv</span>
+<div class="view" id="viewSaved" style="flex-direction:column;padding:16px;overflow-y:auto;">
+  <div class="stats-header" style="margin-bottom:12px;">Archiv</div>
+  <div class="archive-tabs-wrap">
+    <button class="archive-tab active" id="archiveTabLineups" onclick="switchArchive('lineups')">📋 Aufstellungen</button>
+    <button class="archive-tab" id="archiveTabRosters" onclick="switchArchive('rosters')">👥 Kader</button>
   </div>
-  <div style="display:flex;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--pb);padding-bottom:12px;">
-    <button id="archiveBtnLineups" class="btn" style="font-size:.8rem;" onclick="switchArchive('lineups')">📋 Aufstellungen</button>
-    <button id="archiveBtnRosters" class="btn sec" style="font-size:.8rem;" onclick="switchArchive('rosters')">👥 Kader</button>
-  </div>
-  <div id="archiveLineups"><div id="savedContent"></div></div>
+  <div id="archiveLineups"><div class="archive-grid" id="savedContent"></div></div>
   <div id="archiveRosters" style="display:none;">
-    <div id="savedRostersContent"></div>
+    <div class="archive-grid" id="savedRostersContent"></div>
   </div>
 </div>
 
@@ -644,6 +673,10 @@ textarea{resize:vertical;min-height:70px;}
       <span class="stat-cnt" id="epRed">0</span>
       <button class="stat-btn" style="background:#c03030;color:#fff;" onclick="adjStat('red',1)">+</button>
     </div>
+  </div>
+  <div class="ep-field" style="min-width:160px;">
+    <label>★ Note (1–10)</label>
+    <div class="rating-btn-row" id="epRatingRow"></div>
   </div>
   <button class="btn" onclick="applyEdit()">✓ OK</button>
   <button class="btn sec" onclick="applyAndNext()" title="Speichern & nächster Spieler">→ Weiter</button>
@@ -856,6 +889,11 @@ textarea{resize:vertical;min-height:70px;}
         </div>
       </div>
     </div>
+
+    <!-- Rating 1-10 -->
+    <hr class="mob-ep-divider" style="margin-top:0;">
+    <label class="lbl" style="display:block;margin-bottom:8px;">★ Note (1–10)</label>
+    <div style="display:flex;gap:4px;margin-bottom:16px;" id="mobEpRatingRow"></div>
 
     <div style="display:flex;gap:8px;margin-bottom:4px;">
       <button class="btn del" style="flex:0 0 auto;min-height:48px;padding:0 16px;" onclick="mobPlayerDelete()">✕</button>
@@ -1190,6 +1228,41 @@ function buildEpColors() {
   });
 }
 
+// ── RATING HELPERS ──
+function ratingColor(r) {
+  if(!r) return 'rgba(255,255,255,.12)';
+  if(r <= 3) return '#c03030';
+  if(r <= 5) return '#c07820';
+  if(r <= 7) return '#b09010';
+  if(r <= 9) return '#27ae60';
+  return '#e8c84a';
+}
+
+function buildRatingBtns(containerId, currentRating, onSelect) {
+  const wrap = document.getElementById(containerId);
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  for(let i=1;i<=10;i++){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = (containerId.startsWith('mob') ? 'mob-rating-btn' : 'rating-btn') + (i===currentRating ? ' sel' : '');
+    if(i===currentRating) b.style.background = ratingColor(i);
+    b.textContent = i;
+    b.onclick = () => {
+      wrap.querySelectorAll('button').forEach(x=>{ x.classList.remove('sel'); x.style.background=''; });
+      b.classList.add('sel');
+      b.style.background = ratingColor(i);
+      if(onSelect) onSelect(i);
+    };
+    wrap.appendChild(b);
+  }
+}
+
+function getSelectedRating(containerId) {
+  const sel = document.querySelector(`#${containerId} button.sel`);
+  return sel ? parseInt(sel.textContent) : 0;
+}
+
 function bindInputs() {
   ['iTeam','iOpp','iDate','iScore','iNotes'].forEach(id => {
     const el = document.getElementById(id);
@@ -1489,6 +1562,16 @@ function renderPitch() {
     if(p.yellow>0){const b=document.createElement('div');b.className='badge ycard';badges.appendChild(b);}
     if(p.red>0){const b=document.createElement('div');b.className='badge rcard';badges.appendChild(b);}
     if(badges.innerHTML) dot.appendChild(badges);
+
+    // Rating badge
+    if(p.rating) {
+      const rb = document.createElement('div');
+      rb.className = 'rating-badge';
+      rb.style.background = ratingColor(p.rating);
+      rb.style.color = p.rating >= 10 ? '#0a1a0f' : '#fff';
+      rb.textContent = p.rating;
+      dot.appendChild(rb);
+    }
 
     const name = document.createElement('div');
     name.className = 'pname';
@@ -1791,6 +1874,15 @@ function renderSubs() {
     if(s.red>0){const b=document.createElement('div');b.className='badge rcard';b.style.width='8px';b.style.height='11px';sbadges.appendChild(b);}
     if(sbadges.innerHTML) dot.appendChild(sbadges);
 
+    // Rating badge on sub dot
+    if(s.rating) {
+      const rb = document.createElement('div');
+      rb.className = 'rating-badge';
+      rb.style.cssText = `background:${ratingColor(s.rating)};color:${s.rating>=10?'#0a1a0f':'#fff'};bottom:-4px;right:-4px;width:14px;height:14px;font-size:.45rem;`;
+      rb.textContent = s.rating;
+      dot.appendChild(rb);
+    }
+
     // sub-in arrow icon
     const icon = document.createElement('div');
     icon.className = 'sub-icon';
@@ -1860,6 +1952,7 @@ function selectSub(id) {
   document.getElementById('epYellow').textContent = s.yellow||0;
   document.getElementById('epRed').textContent = s.red||0;
   document.querySelectorAll('#epColors .cpick').forEach(d=>d.classList.toggle('sel', d.dataset.c===s.color));
+  buildRatingBtns('epRatingRow', s.rating||0);
   document.getElementById('editPanel').classList.add('open');
   // Override OK button behavior
   document.getElementById('editPanel').dataset.mode = 'sub';
@@ -1876,6 +1969,7 @@ function applySubEdit() {
   s.assists = parseInt(document.getElementById('epAssists').textContent)||0;
   s.yellow = parseInt(document.getElementById('epYellow').textContent)||0;
   s.red = parseInt(document.getElementById('epRed').textContent)||0;
+  s.rating = getSelectedRating('epRatingRow');
   const sel = document.querySelector('#epColors .cpick.sel');
   if(sel) s.color = sel.dataset.c;
   selSubId = null;
@@ -2200,6 +2294,7 @@ function selectPlayer(id) {
   document.getElementById('epYellow').textContent = p.yellow||0;
   document.getElementById('epRed').textContent = p.red||0;
   document.querySelectorAll('#epColors .cpick').forEach(d=>d.classList.toggle('sel', d.dataset.c===p.color));
+  buildRatingBtns('epRatingRow', p.rating||0);
   document.getElementById('editPanel').classList.add('open');
   renderPitch();
 }
@@ -2235,6 +2330,7 @@ function openMobPlayerEdit(p) {
   document.getElementById('mobEpAssists').textContent = p.assists || 0;
   document.getElementById('mobEpYellow').textContent  = p.yellow  || 0;
   document.getElementById('mobEpRed').textContent     = p.red     || 0;
+  buildRatingBtns('mobEpRatingRow', p.rating||0);
 
   // Kit color picker
   const colWrap = document.getElementById('mobEpColors');
@@ -2395,12 +2491,13 @@ function applyMobPlayerEdit() {
   p.assists = parseInt(document.getElementById('mobEpAssists').textContent) || 0;
   p.yellow  = parseInt(document.getElementById('mobEpYellow').textContent)  || 0;
   p.red     = parseInt(document.getElementById('mobEpRed').textContent)     || 0;
+  p.rating  = getSelectedRating('mobEpRatingRow');
   const sel = document.querySelector('#mobEpColors .cpick.sel');
   if(sel) p.color = sel.dataset.c;
   // sync to all snapshots
   ['start','end'].forEach(v => {
     const sp = snapshots[v]?.players?.find(x=>x.id===selId);
-    if(sp) { sp.num=p.num; sp.name=p.name; sp.color=p.color; sp.goals=p.goals; sp.assists=p.assists; sp.yellow=p.yellow; sp.red=p.red; }
+    if(sp) { sp.num=p.num; sp.name=p.name; sp.color=p.color; sp.goals=p.goals; sp.assists=p.assists; sp.yellow=p.yellow; sp.red=p.red; sp.rating=p.rating; }
   });
   closeMobSheet();
   closeEdit();
@@ -2461,13 +2558,14 @@ function applyEdit() {
   const assists = parseInt(document.getElementById('epAssists').textContent)||0;
   const yellow = parseInt(document.getElementById('epYellow').textContent)||0;
   const red = parseInt(document.getElementById('epRed').textContent)||0;
+  const rating = getSelectedRating('epRatingRow');
   const selColor = document.querySelector('#epColors .cpick.sel');
   const color = selColor ? selColor.dataset.c : null;
   // Apply to current players + all snapshots
   const applyToArr = (arr) => {
     const p = arr?.find(x=>x.id===selId);
     if(!p) return;
-    p.num=num; p.name=name; p.goals=goals; p.assists=assists; p.yellow=yellow; p.red=red;
+    p.num=num; p.name=name; p.goals=goals; p.assists=assists; p.yellow=yellow; p.red=red; p.rating=rating;
     if(color) p.color=color;
   };
   applyToArr(players);
@@ -2985,6 +3083,7 @@ function selectSubOnField(sid) {
   document.getElementById('epYellow').textContent = s.yellow||0;
   document.getElementById('epRed').textContent = s.red||0;
   document.querySelectorAll('#epColors .cpick').forEach(d=>d.classList.toggle('sel', d.dataset.c===s.color));
+  buildRatingBtns('epRatingRow', s.rating||0);
   document.getElementById('editPanel').classList.add('open');
   document.getElementById('editPanel').dataset.mode = 'sub';
   renderSubs();
@@ -3154,10 +3253,8 @@ function renderLineupList() {
 function switchArchive(tab) {
   document.getElementById('archiveLineups').style.display = tab==='lineups' ? 'block' : 'none';
   document.getElementById('archiveRosters').style.display = tab==='rosters' ? 'block' : 'none';
-  document.getElementById('archiveBtnLineups').className = tab==='lineups' ? 'btn' : 'btn sec';
-  document.getElementById('archiveBtnRosters').className = tab==='rosters' ? 'btn' : 'btn sec';
-  document.getElementById('archiveBtnLineups').style.fontSize = '.8rem';
-  document.getElementById('archiveBtnRosters').style.fontSize = '.8rem';
+  document.getElementById('archiveTabLineups').classList.toggle('active', tab==='lineups');
+  document.getElementById('archiveTabRosters').classList.toggle('active', tab==='rosters');
   if(tab==='rosters') renderSavedRostersArchive();
 }
 
@@ -3165,26 +3262,26 @@ function renderSavedRostersArchive() {
   const wrap = document.getElementById('savedRostersContent');
   if(!wrap) return;
   if(!savedRosters.length) {
-    wrap.innerHTML = '<div class="no-data">Noch keine gespeicherten Kader.<br>Kader importieren und 💾 klicken.</div>';
+    wrap.innerHTML = '<div class="no-data" style="grid-column:1/-1;">Noch keine gespeicherten Kader.<br>Kader importieren und 💾 klicken.</div>';
     return;
   }
   wrap.innerHTML = '';
   savedRosters.forEach(r => {
     const card = document.createElement('div');
-    card.style.cssText = 'background:var(--gd);border:1px solid var(--pb);border-radius:8px;padding:14px;margin-bottom:12px;max-width:600px;';
-    if(r.id===curRosterId) card.style.borderColor = 'var(--acc)';
+    card.className = 'archive-card' + (r.id===curRosterId ? ' current-card' : '');
+    const preview = r.roster.slice(0,6).map(p=>`<span class="ac-chip">${p.num ? p.num+' ' : ''}${p.name}</span>`).join('');
+    const more = r.roster.length > 6 ? `<span class="ac-chip more">+${r.roster.length-6}</span>` : '';
     card.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <div style="flex:1;">
-          <div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;letter-spacing:.05em;">${r.name}</div>
-          <div style="font-size:.75rem;color:var(--gr);">${r.roster.length} Spieler</div>
+      <div>
+        <div class="ac-team">${r.name}</div>
+        <div class="ac-meta" style="margin-top:4px;">
+          <span>${r.roster.length} Spieler</span>
         </div>
-        <button class="btn sec" style="font-size:.75rem;padding:4px 10px;" onclick="loadSavedRoster(${r.id});showView('lineup');showToast('Kader geladen: ${r.name}')">Laden</button>
-        <button class="btn del" style="font-size:.75rem;padding:4px 10px;" onclick="deleteSavedRoster(${r.id});renderSavedRostersArchive()">Löschen</button>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">
-        ${r.roster.slice(0,8).map(p=>`<span style="background:rgba(255,255,255,.07);border-radius:4px;padding:2px 7px;font-size:.72rem;">${p.num} ${p.name}</span>`).join('')}
-        ${r.roster.length>8?`<span style="font-size:.72rem;color:var(--gr);">+${r.roster.length-8} weitere</span>`:''}
+      <div class="ac-players">${preview}${more}</div>
+      <div class="ac-actions">
+        <button class="btn" onclick="loadSavedRoster(${r.id});showView('lineup');showToast('Kader geladen: ${r.name}')">Laden</button>
+        <button class="btn del" onclick="deleteSavedRoster(${r.id});renderSavedRostersArchive()">Löschen</button>
       </div>
     `;
     wrap.appendChild(card);
@@ -3193,24 +3290,33 @@ function renderSavedRostersArchive() {
 
 function renderSavedView() {
   const wrap = document.getElementById('savedContent');
-  if(!savedLineups.length){ wrap.innerHTML='<div class="no-data">Noch keine gespeicherten Aufstellungen.<br>Im Aufstellungs-Tab auf „Speichern" klicken.</div>'; return; }
+  if(!savedLineups.length){ wrap.innerHTML='<div class="no-data" style="grid-column:1/-1;">Noch keine gespeicherten Aufstellungen.<br>Im Aufstellungs-Tab auf „💾 Speichern" klicken.</div>'; return; }
   wrap.innerHTML = '';
   savedLineups.forEach(lu => {
     const card = document.createElement('div');
-    card.style.cssText='background:var(--gd);border:1px solid var(--pb);border-radius:8px;padding:14px;margin-bottom:12px;max-width:600px;';
-    card.innerHTML=`
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
-        <div style="flex:1">
-          <div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;letter-spacing:.05em;">${lu.name}</div>
-          <div style="font-size:.75rem;color:var(--gr);">${lu.formation} · ${lu.meta.opp?'vs '+lu.meta.opp+' · ':''} ${lu.meta.date||''} ${lu.meta.score?'('+lu.meta.score+')':''}</div>
+    card.className = 'archive-card' + (lu.id===curLineupId ? ' current-card' : '');
+    const teamName = lu.meta.team || lu.name || '–';
+    const metaParts = [];
+    if(lu.meta.opp) metaParts.push('vs '+lu.meta.opp);
+    if(lu.meta.date) metaParts.push(lu.meta.date);
+    if(lu.meta.score) metaParts.push(lu.meta.score);
+    const namedPlayers = lu.players.filter(p=>p.name);
+    const preview = namedPlayers.slice(0,6).map(p=>`<span class="ac-chip">${p.num ? p.num+' ' : ''}${p.name}</span>`).join('');
+    const more = namedPlayers.length > 6 ? `<span class="ac-chip more">+${namedPlayers.length-6}</span>` : '';
+    card.innerHTML = `
+      <div>
+        <div class="ac-team">${teamName}</div>
+        <span class="ac-formation">${lu.formation}</span>
+        <div class="ac-meta" style="margin-top:6px;">
+          ${metaParts.map(m=>`<span>${m}</span>`).join('')}
         </div>
+      </div>
+      <div class="ac-players">${preview}${more}</div>
+      ${lu.meta.notes ? `<div style="font-size:.72rem;color:var(--gr);font-style:italic;border-top:1px solid var(--pb);padding-top:8px;">${lu.meta.notes}</div>` : ''}
+      <div class="ac-actions">
         <button class="btn" onclick="loadLineup(${lu.id})">Laden</button>
-        <button class="btn del" style="font-size:.75rem;padding:4px 10px;" onclick="deleteLineup(${lu.id})">Löschen</button>
+        <button class="btn del" onclick="deleteLineup(${lu.id})">Löschen</button>
       </div>
-      <div style="font-size:.78rem;color:var(--gr);display:flex;flex-wrap:wrap;gap:8px;">
-        ${lu.players.filter(p=>p.name).map(p=>`<span style="background:rgba(255,255,255,.06);padding:2px 8px;border-radius:3px;">${p.num} ${p.name}</span>`).join('')}
-      </div>
-      ${lu.meta.notes?`<div style="font-size:.75rem;color:var(--gr);margin-top:8px;font-style:italic;">${lu.meta.notes}</div>`:''}
     `;
     wrap.appendChild(card);
   });
@@ -3226,7 +3332,7 @@ function renderStats() {
   const sorted = [...allPlayers].sort((a,b)=>(b.goals+b.assists)-(a.goals+a.assists));
   wrap.innerHTML=`
     <table class="stats-table">
-      <thead><tr><th>#</th><th>Name</th><th>Pos</th><th>⚽</th><th>🅰</th><th>🟨</th><th>🟥</th></tr></thead>
+      <thead><tr><th>#</th><th>Name</th><th>Pos</th><th>⚽</th><th>🅰</th><th>🟨</th><th>🟥</th><th>★</th></tr></thead>
       <tbody>
         ${sorted.map(p=>`
           <tr>
@@ -3237,6 +3343,7 @@ function renderStats() {
             <td><span class="badge-lg assist">${p.assists||0}</span></td>
             <td>${p.yellow?`<span class="badge-lg yc">${p.yellow}</span>`:'–'}</td>
             <td>${p.red?`<span class="badge-lg rc">${p.red}</span>`:'–'}</td>
+            <td>${p.rating?`<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:.75rem;font-weight:700;background:${ratingColor(p.rating)};color:${p.rating>=10?'#0a1a0f':'#fff'};">${p.rating}</span>`:'–'}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -3251,37 +3358,105 @@ const SUPABASE_URL = 'https://gsdjbxxwqagwbmnplhyv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzZGpieHh3cWFnd2JtbnBsaHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MDAwNDgsImV4cCI6MjA5MTM3NjA0OH0.8zXJfg-6KmsD3mRq_kMtzoPFbD9j6zqyRPOraaP51bg';
 const SB_TABLE = 'scoutboard_data';
 const SB_KEY = 'main';
-const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-console.log('Supabase client initialized:', sbClient);
+const SB_TIMEOUT_MS = 6000; // max wait for any Supabase call on slow mobile
+
+// Guard against CDN load failure (ad blockers, offline start, etc.)
+let sbClient = null;
+try {
+  if (typeof supabase !== 'undefined') {
+    sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.info('[SB] Supabase client ready');
+  } else {
+    console.warn('[SB] supabase global not found — CDN may have failed to load. Cloud sync disabled.');
+  }
+} catch(e) {
+  console.error('[SB] createClient failed:', e.message);
+}
+
+// Pending save that should be retried once we come back online
+let _sbPendingSave = null;
+let _sbSaveFailCount = 0;
+
+function _sbLogError(context, err) {
+  // Log all available Supabase error fields for easier debugging
+  const parts = [`[SB] ${context}`];
+  if (err?.message)  parts.push(`message="${err.message}"`);
+  if (err?.code)     parts.push(`code=${err.code}`);
+  if (err?.details)  parts.push(`details="${err.details}"`);
+  if (err?.hint)     parts.push(`hint="${err.hint}"`);
+  if (err?.status)   parts.push(`status=${err.status}`);
+  console.error(parts.join(' | '), err);
+}
 
 async function saveToSupabase(json) {
+  if (!sbClient) return;
+  if (!navigator.onLine) {
+    console.info('[SB] Offline — queuing save for retry');
+    _sbPendingSave = json;
+    return;
+  }
   try {
-    const { error } = await sbClient
+    const upsertPromise = sbClient
       .from(SB_TABLE)
       .upsert({ key: SB_KEY, data: json }, { onConflict: 'key' });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), SB_TIMEOUT_MS)
+    );
+    const { error } = await Promise.race([upsertPromise, timeoutPromise]);
     if (error) {
-      console.error('Supabase save error:', error);
-      throw error;
+      _sbLogError('save error', error);
+      _sbSaveFailCount++;
+      _sbPendingSave = json;
+      if (_sbSaveFailCount >= 3) showToast('⚠️ Cloud-Sync fehlgeschlagen');
+      return;
     }
+    _sbPendingSave = null;
+    _sbSaveFailCount = 0;
+    console.info('[SB] Saved OK');
   } catch(e) {
-    console.error('Supabase save exception:', e);
+    _sbLogError('save exception', e);
+    _sbSaveFailCount++;
+    _sbPendingSave = json;
+    if (_sbSaveFailCount >= 3) showToast('⚠️ Cloud-Sync fehlgeschlagen');
   }
 }
 
 async function loadFromSupabase() {
+  if (!sbClient) return null;
+  if (!navigator.onLine) {
+    console.info('[SB] Offline — skipping remote load');
+    return null;
+  }
   try {
-    const { data, error } = await sbClient
+    const queryPromise = sbClient
       .from(SB_TABLE)
       .select('data')
       .eq('key', SB_KEY)
       .maybeSingle();
-    if (error) throw error;
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), SB_TIMEOUT_MS)
+    );
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    if (error) {
+      _sbLogError('load error', error);
+      return null;
+    }
     return data?.data || null;
   } catch(e) {
-    console.warn('Supabase load error:', e);
+    _sbLogError('load exception', e);
     return null;
   }
 }
+
+// Retry pending save when connectivity is restored
+window.addEventListener('online', () => {
+  console.info('[SB] Back online');
+  if (_sbPendingSave) {
+    console.info('[SB] Retrying pending save...');
+    saveToSupabase(_sbPendingSave);
+  }
+});
+window.addEventListener('offline', () => console.info('[SB] Went offline'));
 
 // ===================================================
 // PERSIST
@@ -3307,11 +3482,11 @@ function saveStorage() {
     localStorage.setItem('sbpro_v5', json);
     // Verify it was saved correctly
     const verify = localStorage.getItem('sbpro_v5');
-    if(!verify) throw new Error('Verify failed');
+    if(!verify) throw new Error('localStorage verify failed');
     // Also persist to Supabase (fire-and-forget)
     saveToSupabase(json);
   } catch(e) {
-    console.error('saveStorage error:', e);
+    console.error('[persist] saveStorage error:', e.message, e);
     showToast('⚠️ Speichern fehlgeschlagen!');
   }
 }
@@ -3319,7 +3494,7 @@ function saveStorage() {
 // Save immediately when critical data changes
 function saveNow(label) {
   saveStorage();
-  if(label) console.log('Saved:', label, '— savedRosters:', savedRosters.length, 'savedLineups:', savedLineups.length);
+  if(label) console.log('[persist] Saved:', label, '— savedRosters:', savedRosters.length, 'savedLineups:', savedLineups.length);
 }
 
 function applyStorageData(raw) {
@@ -3349,11 +3524,11 @@ function applyStorageData(raw) {
       document.getElementById('iScore').value = d.meta.score||'';
       document.getElementById('iNotes').value = d.meta.notes||'';
     }
-  } catch(e){ console.error('applyStorageData error:', e); }
+  } catch(e){ console.error('[persist] applyStorageData error:', e.message, e); }
 }
 
 async function loadStorage() {
-  // Try Supabase first
+  // Try Supabase first (with built-in timeout so mobile doesn't hang)
   const remoteRaw = await loadFromSupabase();
   if(remoteRaw) {
     applyStorageData(remoteRaw);
@@ -3366,11 +3541,18 @@ async function loadStorage() {
   applyStorageData(raw);
 }
 
-// Save when leaving page
+// Save when leaving page — use all three events for cross-browser/mobile coverage:
+// - beforeunload: desktop browsers
+// - pagehide: iOS Safari (beforeunload is unreliable there)
+// - visibilitychange hidden: Android Chrome background tab
 window.addEventListener('beforeunload', () => saveStorage());
+window.addEventListener('pagehide', () => saveStorage());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveStorage();
+});
 
-// Auto-save every 15s
-setInterval(() => { saveStorage(); }, 15000);
+// Auto-save every 15s (skip if offline to avoid log noise)
+setInterval(() => { if (navigator.onLine !== false) saveStorage(); }, 15000);
 
 // ===================================================
 // PRINT
