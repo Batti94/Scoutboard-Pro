@@ -1106,8 +1106,9 @@ async function init() {
 
 function checkUrlImport() {
   try {
-    // Check localStorage import (from bookmarklet via import.html)
     const params = new URLSearchParams(window.location.search);
+
+    // ── Path A: bookmarklet via import.html (localStorage handoff) ──
     const fromImport = params.get('fromImport');
     if(fromImport) {
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -1117,53 +1118,47 @@ function checkUrlImport() {
         localStorage.removeItem('sb_import_ready');
         localStorage.removeItem('sb_import');
         if(data.players && data.players.length) {
-          setTimeout(() => {
-            showConfirmCustom(
-              'Kader importieren',
-              '"'+data.team+'" — '+data.players.length+' Spieler. Ersetzen oder hinzufügen?',
-              'Ersetzen', 'Hinzufügen',
-              () => {
-                roster = data.players.map(p=>({id:nextRid++, num:p.num, name:p.name, pos:p.pos}));
-                saveCurrentRosterWithName(data.team);
-                renderRoster(); updateRosterSelect();
-                showToast('✓ Kader importiert: '+data.team);
-              },
-              () => {
-                const add = data.players.map(p=>({id:nextRid++, num:p.num, name:p.name, pos:p.pos}));
-                roster = [...roster, ...add];
-                renderRoster(); updateRosterSelect();
-                showToast('✓ '+add.length+' Spieler hinzugefügt');
-              }
-            );
-          }, 300);
+          setTimeout(() => applyBookmarkletImport(data), 300);
           return;
         }
       }
     }
 
-    // Check URL parameter import
+    // ── Path B: direct ?import= URL parameter ──
     const raw = params.get('import');
     if(!raw) return;
     const data = JSON.parse(decodeURIComponent(raw));
     if(!data.players || !data.players.length) return;
-    const imported = data.players.map(p => {
-      // Handle both object format {num,name,pos} and string format "num|name|pos"
-      if(typeof p === 'object') return {id: nextRid++, num: p.num||'?', name: p.name||'', pos: p.pos||'–'};
-      const parts = p.split('|');
-      return {id: nextRid++, num: parts[0]||'?', name: parts[1]||'', pos: parts[2]||'–'};
-    }).filter(p => p.name);
-    if(!imported.length) return;
     window.history.replaceState({}, document.title, window.location.pathname);
-    setTimeout(() => {
-      showConfirmCustom(
-        'Kader importieren',
-        '"'+data.team+'" — '+imported.length+' Spieler. Aktuellen Kader ersetzen oder hinzufügen?',
-        'Ersetzen', 'Hinzufügen',
-        () => { roster=imported; saveCurrentRosterWithName(data.team); renderRoster(); updateRosterSelect(); showToast('✓ Kader importiert: '+data.team); },
-        () => { roster=[...roster,...imported]; renderRoster(); updateRosterSelect(); showToast('✓ '+imported.length+' Spieler hinzugefügt'); }
-      );
-    }, 500);
+    setTimeout(() => applyBookmarkletImport(data), 500);
   } catch(e){ console.error('Import error:',e); }
+}
+
+function applyBookmarkletImport(data) {
+  // Save current roster first if it has a name and players
+  if(roster.length && curRosterId) {
+    const existing = savedRosters.find(r => r.id === curRosterId);
+    if(existing) {
+      existing.roster = JSON.parse(JSON.stringify(roster));
+      saveNow('auto-save before import');
+    }
+  }
+
+  // Build new roster from imported data
+  const newRoster = data.players.map(p => {
+    if(typeof p === 'object') return {id: nextRid++, num: p.num||'?', name: p.name||'', pos: p.pos||'–'};
+    const parts = p.split('|');
+    return {id: nextRid++, num: parts[0]||'?', name: parts[1]||'', pos: parts[2]||'–'};
+  }).filter(p => p.name);
+
+  if(!newRoster.length) return;
+
+  // Create and immediately load the new roster
+  roster = newRoster;
+  saveCurrentRosterWithName(data.team || 'Importierter Kader');
+  renderRoster();
+  updateRosterSelect();
+  showToast('✓ Kader importiert: ' + (data.team || 'Importierter Kader'));
 }
 
 function saveCurrentRosterWithName(name) {
