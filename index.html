@@ -3649,39 +3649,28 @@ function applyStorageData(raw) {
 }
 
 async function loadStorage() {
-  // Load both sources in parallel — compare timestamps to pick the fresher one.
-  // This prevents a stale Supabase record (e.g. a delete that hadn't synced yet)
-  // from overwriting a newer localStorage state.
-  const localRaw  = localStorage.getItem('sbpro_v5')
-                 || localStorage.getItem('sbpro_v4')
-                 || localStorage.getItem('sbpro_v3');
+  // Supabase is the single source of truth for cross-device sync.
+  // localStorage is the offline fallback only.
+  //
+  // NOTE: do NOT use timestamps here to decide between sources.
+  // autosave/pagehide/visibilitychange stamp Date.now() onto every save,
+  // so a device that loaded remote data and then autosaved will always have
+  // a "newer" local timestamp — breaking cross-device sync.
   const remoteRaw = await loadFromSupabase();
-
-  const tsOf = raw => {
-    try { return raw ? (JSON.parse(raw)._savedAt || 0) : 0; } catch(e) { return 0; }
-  };
-
-  const localTs  = tsOf(localRaw);
-  const remoteTs = tsOf(remoteRaw);
-
-  console.info(`[persist] load — local _savedAt=${localTs}, remote _savedAt=${remoteTs}`);
-
-  if(remoteRaw && remoteTs >= localTs) {
-    // Remote is same age or newer → use it and keep localStorage in sync
-    console.info('[persist] using remote (Supabase)');
+  if(remoteRaw) {
+    console.info('[persist] loaded from Supabase');
     applyStorageData(remoteRaw);
     localStorage.setItem('sbpro_v5', remoteRaw);
-  } else if(localRaw) {
-    // localStorage is newer (e.g. a save/delete that hadn't synced yet) → use it
-    // and push to Supabase so both sources converge
-    console.info('[persist] using local (localStorage is newer or remote unavailable)');
-    applyStorageData(localRaw);
-    if(localTs > remoteTs) {
-      console.info('[persist] pushing newer local state to Supabase…');
-      saveToSupabase(localRaw);
-    }
+    return;
   }
-  // If both are empty → nothing to restore (fresh start)
+  // Supabase unavailable (offline, timeout, error) → fall back to localStorage
+  const localRaw = localStorage.getItem('sbpro_v5')
+                || localStorage.getItem('sbpro_v4')
+                || localStorage.getItem('sbpro_v3');
+  if(localRaw) {
+    console.info('[persist] Supabase unavailable — loaded from localStorage');
+    applyStorageData(localRaw);
+  }
 }
 
 // Save when leaving page — use all three events for cross-browser/mobile coverage:
