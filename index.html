@@ -3586,6 +3586,7 @@ function saveStorage() {
   try {
     if(curView !== 'combined') snapshots[curView] = getSnapshot();
     const data = {
+      _savedAt: Date.now(),   // ← timestamp lets loadStorage pick the newer source
       curFormation, players, roster, subs,
       savedLineups, savedRosters,
       curRosterId, curLineupId, nextSrid,
@@ -3601,10 +3602,9 @@ function saveStorage() {
     };
     const json = JSON.stringify(data);
     localStorage.setItem('sbpro_v5', json);
-    // Verify it was saved correctly
     const verify = localStorage.getItem('sbpro_v5');
     if(!verify) throw new Error('localStorage verify failed');
-    // Also persist to Supabase (fire-and-forget)
+    // Fire-and-forget Supabase sync (timestamp ensures stale remote never wins)
     saveToSupabase(json);
   } catch(e) {
     console.error('[persist] saveStorage error:', e.message, e);
@@ -3649,17 +3649,39 @@ function applyStorageData(raw) {
 }
 
 async function loadStorage() {
-  // Try Supabase first (with built-in timeout so mobile doesn't hang)
+  // Load both sources in parallel — compare timestamps to pick the fresher one.
+  // This prevents a stale Supabase record (e.g. a delete that hadn't synced yet)
+  // from overwriting a newer localStorage state.
+  const localRaw  = localStorage.getItem('sbpro_v5')
+                 || localStorage.getItem('sbpro_v4')
+                 || localStorage.getItem('sbpro_v3');
   const remoteRaw = await loadFromSupabase();
-  if(remoteRaw) {
+
+  const tsOf = raw => {
+    try { return raw ? (JSON.parse(raw)._savedAt || 0) : 0; } catch(e) { return 0; }
+  };
+
+  const localTs  = tsOf(localRaw);
+  const remoteTs = tsOf(remoteRaw);
+
+  console.info(`[persist] load — local _savedAt=${localTs}, remote _savedAt=${remoteTs}`);
+
+  if(remoteRaw && remoteTs >= localTs) {
+    // Remote is same age or newer → use it and keep localStorage in sync
+    console.info('[persist] using remote (Supabase)');
     applyStorageData(remoteRaw);
-    // Keep localStorage in sync
     localStorage.setItem('sbpro_v5', remoteRaw);
-    return;
+  } else if(localRaw) {
+    // localStorage is newer (e.g. a save/delete that hadn't synced yet) → use it
+    // and push to Supabase so both sources converge
+    console.info('[persist] using local (localStorage is newer or remote unavailable)');
+    applyStorageData(localRaw);
+    if(localTs > remoteTs) {
+      console.info('[persist] pushing newer local state to Supabase…');
+      saveToSupabase(localRaw);
+    }
   }
-  // Fallback: localStorage
-  const raw = localStorage.getItem('sbpro_v5') || localStorage.getItem('sbpro_v4') || localStorage.getItem('sbpro_v3');
-  applyStorageData(raw);
+  // If both are empty → nothing to restore (fresh start)
 }
 
 // Save when leaving page — use all three events for cross-browser/mobile coverage:
