@@ -451,6 +451,7 @@ textarea{resize:vertical;min-height:70px;}
     <div class="sb-sec">
       <h3>Formation</h3>
       <div class="form-grid" id="formGrid"></div>
+      <button class="btn" style="width:100%;margin-top:8px;font-size:.78rem;" onclick="autoLineup()">⚡ Auto-Aufstellung</button>
     </div>
     <div class="sb-sec">
       <h3>Teaminfo</h3>
@@ -804,6 +805,8 @@ textarea{resize:vertical;min-height:70px;}
     <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
   </div>
   <div class="mob-sheet-body" style="display:flex;flex-direction:column;gap:10px;padding-top:8px;">
+    <button class="btn" style="width:100%;min-height:52px;font-size:.9rem;" onclick="autoLineup();closeMobSheet()">⚡ Auto-Aufstellung</button>
+    <div style="height:1px;background:var(--pb);"></div>
     <button class="btn sec" style="width:100%" onclick="resetLineup();closeMobSheet()">↺ Aufstellung zurücksetzen</button>
     <button class="btn sec" style="width:100%" onclick="undo()">↩ Undo</button>
     <button class="btn sec" style="width:100%" onclick="saveLineup();closeMobSheet()">💾 Aufstellung speichern</button>
@@ -1433,6 +1436,129 @@ function applyFormation(key, keepData) {
   nextPid = pid;
   renderPitch();
   renderRoster();
+}
+
+// ===================================================
+// AUTO-AUFSTELLUNG
+// ===================================================
+function autoLineup() {
+  if (!roster.length) { showToast('Kein Kader geladen — bitte zuerst einen Kader auswählen'); return; }
+
+  const doIt = () => {
+    saveHistory();
+
+    const f = FORMATIONS[curFormation];
+    const rows = f.rows;
+    const rowCount = rows.length;
+
+    // Assign a position-group label to each formation row
+    // Row 0 → GK, Row 1 → DEF, last row → FWD, anything in-between → MID
+    const rowGroups = rows.map((_, ri) => {
+      if (ri === 0) return 'gk';
+      if (ri === 1) return 'def';
+      if (ri === rowCount - 1 && rowCount > 2) return 'fwd';
+      return 'mid';
+    });
+
+    // Build player pools from roster, sorted so GK positions are prioritised
+    const allRoster = [...roster];
+    const pools = {
+      gk:    allRoster.filter(p => posGroup(p.pos, false) === 'gk'),
+      def:   allRoster.filter(p => posGroup(p.pos, false) === 'def'),
+      mid:   allRoster.filter(p => posGroup(p.pos, false) === 'mid'),
+      fwd:   allRoster.filter(p => posGroup(p.pos, false) === 'fwd'),
+      other: allRoster.filter(p => posGroup(p.pos, false) === 'other'),
+    };
+
+    // Fallback order per group when the ideal pool runs dry
+    const fallback = {
+      gk:  ['gk',  'def',  'other', 'mid', 'fwd'],
+      def: ['def', 'mid',  'other', 'fwd', 'gk'],
+      mid: ['mid', 'def',  'fwd',   'other', 'gk'],
+      fwd: ['fwd', 'mid',  'other', 'def', 'gk'],
+    };
+
+    const used = new Set();
+
+    function pick(group) {
+      for (const g of fallback[group]) {
+        const p = pools[g].find(r => !used.has(r.id));
+        if (p) { used.add(p.id); return p; }
+      }
+      return null; // roster too small to fill this slot
+    }
+
+    // Preserve current color per slot-id so colours survive
+    const colorBySlot = {};
+    players.forEach(p => { colorBySlot[p.id] = p.color; });
+
+    const newPlayers = [];
+    let pid = 1;
+
+    rows.forEach((count, ri) => {
+      const group = rowGroups[ri];
+      const y = f.ys[ri];
+      const mg = 0.06;
+      for (let j = 0; j < count; j++) {
+        const x = count === 1 ? 0.5 : mg + (j / (count - 1)) * (1 - 2 * mg);
+        const rp = pick(group);
+        newPlayers.push({
+          id:      pid,
+          x, y,
+          num:     rp ? rp.num   : '',
+          name:    rp ? rp.name  : '',
+          pos:     rp ? rp.pos   : '',
+          color:   colorBySlot[pid] || (pid === 1 ? KIT_COLORS[1] : KIT_COLORS[0]),
+          isGK:    pid === 1,
+          goals: 0, assists: 0, yellow: 0, red: 0, rating: 0,
+        });
+        pid++;
+      }
+    });
+
+    players = newPlayers;
+    nextPid = pid;
+
+    // Remaining unused roster players → bench (max 7)
+    const bench = roster.filter(r => !used.has(r.id)).slice(0, 7);
+    subs = bench.map(r => ({
+      id:       nextSubId++,
+      num:      r.num,
+      name:     r.name,
+      pos:      r.pos || '',
+      color:    KIT_COLORS[0],
+      goals: 0, assists: 0, yellow: 0, red: 0, rating: 0,
+      subForId: null, onField: false, fieldX: 0.5, fieldY: 0.5,
+    }));
+
+    // Reset snapshots — auto lineup starts fresh
+    snapshots = { start: null, end: null, combined: null };
+    curView = 'start';
+    ['start','end','combined'].forEach(v => {
+      const btn = document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
+      if (btn) { btn.style.background = v==='start'?'var(--acc)':'transparent'; btn.style.color = v==='start'?'var(--gd)':'var(--gr)'; }
+    });
+
+    renderPitch();
+    renderSubs();
+    renderRoster();
+    saveStorage();
+
+    const filled = newPlayers.filter(p => p.name).length;
+    showToast(`⚡ ${filled} von 11 Positionen besetzt`);
+  };
+
+  const hasNames = players.some(p => p.name);
+  if (hasNames) {
+    showConfirmCustom(
+      'Auto-Aufstellung',
+      `Aktuelle Aufstellung mit Kaderspielern aus "${roster.length} Spielern" automatisch füllen? Die bisherige Aufstellung wird ersetzt.`,
+      'Ja, erstellen', 'Abbrechen',
+      doIt, () => {}
+    );
+  } else {
+    doIt();
+  }
 }
 
 function applyKitColor(c) {
