@@ -3730,14 +3730,17 @@ async function runExport() {
       const prevCenterBg = pitchCenter ? pitchCenter.style.background : '';
       if(pitchCenter) pitchCenter.style.background = '#0d1f13';
 
-      // Step 1: capture pitchOuter with forced dark background
+      // Step 1: capture pitchOuter
+      // Resolve CSS variables to literal hex values so html2canvas renders them correctly
       arrowCv.style.visibility = 'hidden';
       const prevOverflow = pitchEl.style.overflow;
-      const prevOuterBg = pitchOuter.style.background;
-      pitchEl.style.overflow = 'hidden';
-      pitchOuter.style.background = '#0d1f13';
+      const prevOuterBg  = pitchOuter.style.background;
+      const prevPitchBg  = pitchEl.style.background;
+      pitchEl.style.overflow   = 'hidden';
+      pitchOuter.style.background = '#0c1e12'; // --panel
+      pitchEl.style.background    = '#1e5c30'; // --gf (field green) — bypasses CSS var
       const pitchCapture = await html2canvas(pitchOuter, {
-        backgroundColor: '#0c1e12',
+        backgroundColor: '#1e5c30', // --gf: ensures transparent areas show field green
         scale: SCALE,
         useCORS: true,
         allowTaint: true,
@@ -3751,9 +3754,10 @@ async function runExport() {
         windowWidth: document.documentElement.scrollWidth,
         windowHeight: document.documentElement.scrollHeight,
       });
-      arrowCv.style.visibility = '';
-      pitchEl.style.overflow = prevOverflow;
+      arrowCv.style.visibility  = '';
+      pitchEl.style.overflow    = prevOverflow;
       pitchOuter.style.background = prevOuterBg;
+      pitchEl.style.background    = prevPitchBg;
       if(pitchCenter) pitchCenter.style.background = prevCenterBg;
 
       // Step 2: create final canvas
