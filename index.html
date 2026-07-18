@@ -1134,7 +1134,7 @@ function checkUrlImport() {
   } catch(e){ console.error('Import error:',e); }
 }
 
-function applyBookmarkletImport(data) {
+async function applyBookmarkletImport(data) {
   // Save current roster first if it has a name and players
   if(roster.length && curRosterId) {
     const existing = savedRosters.find(r => r.id === curRosterId);
@@ -1155,13 +1155,39 @@ function applyBookmarkletImport(data) {
 
   // Create and immediately load the new roster
   roster = newRoster;
-  saveCurrentRosterWithName(data.team || 'Importierter Kader');
+  await saveCurrentRosterWithName(data.team || 'Importierter Kader');
   renderRoster();
   updateRosterSelect();
   showToast('✓ Kader importiert: ' + (data.team || 'Importierter Kader'));
 }
 
-function saveCurrentRosterWithName(name) {
+// Pull any rosters/lineups saved elsewhere (another tab/device) since this tab
+// last synced, so appending a new one below doesn't silently drop them when
+// this tab's next full save overwrites the remote blob. Needed because each
+// bookmarklet import opens a fresh tab — importing several rosters back to
+// back means several tabs each building on their own snapshot of the archive.
+async function mergeRemoteArchiveIntoLocal() {
+  if (!sbClient || !navigator.onLine) return;
+  try {
+    const remoteRaw = await loadFromSupabase();
+    if (!remoteRaw) return;
+    const remote = JSON.parse(remoteRaw);
+
+    const localRosterIds = new Set(savedRosters.map(r => r.id));
+    (remote.savedRosters || []).forEach(r => { if (!localRosterIds.has(r.id)) savedRosters.push(r); });
+
+    const localLineupIds = new Set(savedLineups.map(l => l.id));
+    (remote.savedLineups || []).forEach(l => { if (!localLineupIds.has(l.id)) savedLineups.push(l); });
+
+    nextSrid = Math.max(nextSrid, savedRosters.length ? Math.max(...savedRosters.map(r=>r.id)) + 1 : 1);
+    nextLid  = Math.max(nextLid,  savedLineups.length  ? Math.max(...savedLineups.map(l=>l.id))  + 1 : 1);
+
+    _lastKnownSavedAt = Math.max(_lastKnownSavedAt, remote._savedAt || 0);
+  } catch(e) { console.error('[SB] archive merge failed', e); }
+}
+
+async function saveCurrentRosterWithName(name) {
+  await mergeRemoteArchiveIntoLocal();
   curRosterId = null;
   const newR = {id:nextSrid++, name, roster:JSON.parse(JSON.stringify(roster))};
   savedRosters.push(newR);
@@ -3260,8 +3286,9 @@ function saveLineup() {
       'Aufstellung speichern',
       'Möchtest du "'+existing.name+'" überschreiben oder eine neue Aufstellung erstellen?',
       'Überschreiben', 'Neu erstellen',
-      () => {
+      async () => {
         // Overwrite
+        await mergeRemoteArchiveIntoLocal();
         if(curView !== 'combined') snapshots[curView] = getSnapshot();
         existing.formation = curFormation;
         existing.players = JSON.parse(JSON.stringify(players));
@@ -3292,7 +3319,8 @@ function saveLineup() {
 
   // No existing lineup — prompt for name
   const defaultName = (document.getElementById('iTeam').value||'Team') + ' – ' + curFormation;
-  showPrompt('Aufstellung benennen', defaultName, name => {
+  showPrompt('Aufstellung benennen', defaultName, async name => {
+    await mergeRemoteArchiveIntoLocal();
     if(curView !== 'combined') snapshots[curView] = getSnapshot();
     const newLu = {
       id: nextLid++,

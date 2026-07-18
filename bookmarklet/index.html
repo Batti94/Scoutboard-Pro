@@ -150,7 +150,7 @@ var code = 'javascript:(function(){' +
   'var name=prompt("Kadername:",team);' +
   'if(!name)return;' +
   'var payload=encodeURIComponent(JSON.stringify({team:name,players:players}));' +
-  'window.open("https://scoutboard-pro.vercel.app/?import="+payload,"_blank");' +
+  'window.open("https://scoutboard-pro.vercel.app/?import="+payload,"scoutboard_import");' +
 '})();';
 
 document.getElementById('bmBtn').href = code;
