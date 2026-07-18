@@ -3542,7 +3542,7 @@ function _sbLogError(context, err) {
   console.error(parts.join(' | '), err);
 }
 
-async function saveToSupabase(json) {
+async function saveToSupabase(json, allowSkipIfStale) {
   if (!sbClient) return;
   if (!navigator.onLine) {
     console.info('[SB] Offline — queuing save for retry');
@@ -3550,23 +3550,31 @@ async function saveToSupabase(json) {
     return;
   }
   try {
-    // Guard against a stale tab (e.g. an old tab left open elsewhere) clobbering
-    // newer data another tab/device already saved since we last synced.
-    const remoteRaw = await loadFromSupabase();
-    if (remoteRaw) {
-      const remoteSavedAt = JSON.parse(remoteRaw)._savedAt || 0;
-      if (remoteSavedAt > _lastKnownSavedAt) {
-        console.warn('[SB] Remote is newer than what this tab last saw — skipping stale write');
-        _lastKnownSavedAt = remoteSavedAt;
-        if (document.visibilityState === 'hidden' || !document.hasFocus()) {
-          // Safe to swap in the newer state silently — user isn't looking at this tab.
+    // Guard against a stale, idle background tab clobbering newer data another
+    // tab/device already saved since we last synced. Only applies to passive
+    // ambient autosaves (the 15s timer, backgrounding, page close) — NOT to an
+    // explicit user action (import, save lineup, etc.), which must always make
+    // it to the cloud. Without that distinction, two tabs left open at once
+    // would perpetually "skip" each other's autosave and neither would ever
+    // actually write, silently breaking cloud sync entirely.
+    if (allowSkipIfStale) {
+      const remoteRaw = await loadFromSupabase();
+      if (remoteRaw) {
+        const remoteSavedAt = JSON.parse(remoteRaw)._savedAt || 0;
+        if (remoteSavedAt > _lastKnownSavedAt) {
+          console.warn('[SB] Remote is newer than what this tab last saw — pulling instead of overwriting');
+          // Always pull the newer data into this tab's actual state (not just
+          // the timestamp bookkeeping) — otherwise this tab stays stale and its
+          // *next* ambient save would overwrite remote with outdated content.
           applyStorageData(remoteRaw);
           localStorage.setItem('sbpro_v5', remoteRaw);
+          _lastKnownSavedAt = remoteSavedAt;
           refreshUIFromState();
-        } else {
-          showToast('⚠️ Neuere Daten von einem anderen Gerät — bitte Seite neu laden');
+          if (document.visibilityState === 'visible' && document.hasFocus()) {
+            showToast('🔄 Daten von anderem Gerät aktualisiert');
+          }
+          return;
         }
-        return;
       }
     }
 
@@ -3636,7 +3644,7 @@ window.addEventListener('offline', () => console.info('[SB] Went offline'));
 // ===================================================
 // PERSIST
 // ===================================================
-function saveStorage() {
+function saveStorage(allowSkipIfStale) {
   try {
     if(curView !== 'combined') snapshots[curView] = getSnapshot();
     const data = {
@@ -3658,8 +3666,8 @@ function saveStorage() {
     localStorage.setItem('sbpro_v5', json);
     const verify = localStorage.getItem('sbpro_v5');
     if(!verify) throw new Error('localStorage verify failed');
-    // Fire-and-forget Supabase sync (timestamp ensures stale remote never wins)
-    saveToSupabase(json);
+    // Fire-and-forget Supabase sync
+    saveToSupabase(json, allowSkipIfStale);
   } catch(e) {
     console.error('[persist] saveStorage error:', e.message, e);
     showToast('⚠️ Speichern fehlgeschlagen!');
@@ -3746,10 +3754,10 @@ function refreshUIFromState() {
 // - beforeunload: desktop browsers
 // - pagehide: iOS Safari (beforeunload is unreliable there)
 // - visibilitychange hidden: Android Chrome background tab
-window.addEventListener('beforeunload', () => saveStorage());
-window.addEventListener('pagehide', () => saveStorage());
+window.addEventListener('beforeunload', () => saveStorage(true));
+window.addEventListener('pagehide', () => saveStorage(true));
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') saveStorage();
+  if (document.visibilityState === 'hidden') saveStorage(true);
   else if (document.visibilityState === 'visible') refreshFromRemoteIfNewer();
 });
 
@@ -3774,7 +3782,7 @@ async function refreshFromRemoteIfNewer() {
 }
 
 // Auto-save every 15s (skip if offline to avoid log noise)
-setInterval(() => { if (navigator.onLine !== false) saveStorage(); }, 15000);
+setInterval(() => { if (navigator.onLine !== false) saveStorage(true); }, 15000);
 
 // ===================================================
 // PRINT
