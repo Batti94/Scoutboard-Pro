@@ -181,7 +181,7 @@ textarea{resize:vertical;min-height:70px;}
 
 /* ── MOBILE COMPONENTS (hidden on desktop) ── */
 .mob-hdr-extra{display:none;align-items:center;gap:6px;margin-left:auto;}
-.mob-action-row{display:none;align-items:center;justify-content:flex-start;gap:6px;padding:4px 0 2px;}
+.mob-action-row{display:none;align-items:center;justify-content:flex-start;gap:6px;padding:4px 0 2px;flex-wrap:wrap;}
 .mob-act-btn{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.18);color:var(--wh);padding:0 12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;min-height:38px;display:flex;align-items:center;gap:4px;transition:background .15s;}
 .mob-act-btn:active{background:rgba(255,255,255,.22);}
 .mob-roster-sel{background:rgba(255,255,255,.06);border:1px solid var(--pb);color:var(--wh);padding:6px 8px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.76rem;max-width:140px;outline:none;}
@@ -483,6 +483,7 @@ textarea{resize:vertical;min-height:70px;}
       <div class="match-info" id="dMatch">–</div>
       <div class="mob-action-row">
         <button class="mob-act-btn" onclick="newLineup()">＋ Neu</button>
+        <button class="mob-act-btn" onclick="autoLineup()">⚡ Auto</button>
         <button class="mob-act-btn" onclick="undo()">↩ Undo</button>
         <button class="mob-act-btn" onclick="resetLineup()">↺ Reset</button>
       </div>
