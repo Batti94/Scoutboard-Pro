@@ -436,6 +436,8 @@ textarea{resize:vertical;min-height:70px;}
     <select class="mob-roster-sel" id="rosterSelectMobHdr" onchange="loadSavedRoster(this.value)">
       <option value="">– Kader –</option>
     </select>
+    <button id="mobFormationBtn" title="Formation" onclick="openMobSheet('sheetFormation')"
+      style="min-width:44px;height:32px;padding:0 8px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#f0f0eb;flex-shrink:0;cursor:pointer;font-size:.72rem;font-weight:700;"></button>
     <button id="mobKitColorBtn" title="Teamfarbe" onclick="openMobKitColorSheet()"
       style="width:32px;height:32px;border-radius:50%;border:2.5px solid rgba(255,255,255,.6);background:#f0f0eb;flex-shrink:0;cursor:pointer;transition:transform .15s;"
       onmouseenter="this.style.transform='scale(1.12)'" onmouseleave="this.style.transform=''"></button>
@@ -768,9 +770,29 @@ textarea{resize:vertical;min-height:70px;}
   </div>
   <div class="mob-sheet-body">
     <div class="form-grid" id="formGridMob" style="margin-bottom:16px;"></div>
-    <div class="sb-sec">
-      <h3>Trikotfarben</h3>
-      <div class="colors" id="kitColorsMob" style="flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+  </div>
+</div>
+
+<!-- SHEET: NEW LINEUP SETUP (guided formation + kit color, shown once per fresh lineup) -->
+<div class="mob-sheet" id="sheetNewLineupSetup">
+  <div class="mob-sheet-handle"></div>
+  <div class="mob-sheet-header">
+    <span class="mob-sheet-title" id="nlsTitle">Formation wählen</span>
+    <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
+  </div>
+  <div class="mob-sheet-body">
+    <div style="display:flex;gap:5px;margin-bottom:16px;">
+      <div class="nls-stepdot" style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.12);"></div>
+      <div class="nls-stepdot" style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.12);"></div>
+    </div>
+    <div id="nlsStep1">
+      <div class="form-grid" id="formGridWizard" style="margin-bottom:16px;"></div>
+      <button class="btn" style="width:100%;min-height:48px;" onclick="nlsGoStep(2)">Weiter</button>
+    </div>
+    <div id="nlsStep2">
+      <div id="mobKitColorPickerWizard" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;"></div>
+      <button class="btn sec" style="width:100%;min-height:44px;margin-bottom:8px;" onclick="nlsGoStep(1)">Zurück</button>
+      <button class="btn" style="width:100%;min-height:48px;" onclick="finishNewLineupSetup()">✓ Fertig</button>
     </div>
   </div>
 </div>
@@ -1084,7 +1106,6 @@ async function init() {
   buildKitColors();
   buildEpColors();
   buildMobFormationBtns();
-  buildMobKitColors();
   await loadStorage();
   applyFormation(curFormation, false);
   bindInputs();
@@ -1188,6 +1209,10 @@ async function mergeRemoteArchiveIntoLocal() {
 
 async function saveCurrentRosterWithName(name) {
   await mergeRemoteArchiveIntoLocal();
+  // A freshly imported/created roster always starts its own clean lineup —
+  // never inherit whatever was on the pitch (or in the Ende/Gesamt snapshots)
+  // from whatever roster was active before.
+  resetLineupForNewRoster();
   curRosterId = null;
   const newR = {id:nextSrid++, name, roster:JSON.parse(JSON.stringify(roster))};
   savedRosters.push(newR);
@@ -1195,6 +1220,8 @@ async function saveCurrentRosterWithName(name) {
   saveNow('saveCurrentRosterWithName: '+name);
   updateRosterSelect();
   renderSavedRosterList();
+  renderAll();
+  redrawArrows();
 }
 
 function showConfirmCustom(title, msg, btnA, btnB, onA, onB) {
@@ -2252,10 +2279,16 @@ function loadSavedRoster(id) {
   if(!id) { roster=[]; curRosterId=null; renderRoster(); saveNow(); return; }
   const r = savedRosters.find(x=>x.id===parseInt(id));
   if(!r) return;
+  // Switching to a different roster means a different lineup — don't let the
+  // previous roster's pitch/snapshots (esp. an old "Ende" view) carry over.
+  if(curRosterId !== r.id) resetLineupForNewRoster();
   roster = JSON.parse(JSON.stringify(r.roster));
   nextRid = Math.max(...roster.map(x=>x.id), 0) + 1;
   curRosterId = r.id;
   renderRoster();
+  renderAll();
+  redrawArrows();
+  updateRosterSelect();
   saveNow();
   showToast('Kader geladen: '+r.name);
 }
@@ -3086,23 +3119,35 @@ function newLineup() {
 
 let _pendingNewLineup = false;
 
-function _doNewLineup() {
-  _pendingNewLineup = false;
+// Clears the current pitch/lineup-in-progress (names, subs, arrows and the
+// per-view start/end/combined snapshots) without touching the roster or match
+// meta fields. Shared by "+ Neu" and by anything that switches to a different
+// roster — switching rosters must never leave the previous roster's lineup
+// sitting in snapshots.end/combined for the new one to stumble into.
+function resetLineupForNewRoster() {
   players.forEach(p => { p.name=''; p.goals=0; p.assists=0; p.yellow=0; p.red=0; });
   subs = [];
   arrows = [];
   snapshots = { start: null, end: null, combined: null };
   curView = 'start';
   curLineupId = null;
+  ['start','end','combined'].forEach(v => {
+    const btn = document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
+    if(btn){ btn.style.background=v==='start'?'var(--acc)':'transparent'; btn.style.color=v==='start'?'var(--gd)':'var(--gr)'; }
+  });
+  // On mobile, guide the user through formation + kit color before they start
+  // placing players — desktop already has both always visible in the sidebar.
+  if(isMobile()) setTimeout(startNewLineupSetup, 300);
+}
+
+function _doNewLineup() {
+  _pendingNewLineup = false;
+  resetLineupForNewRoster();
   document.getElementById('iTeam').value = '';
   document.getElementById('iOpp').value = '';
   document.getElementById('iDate').value = '';
   document.getElementById('iScore').value = '';
   document.getElementById('iNotes').value = '';
-  ['start','end','combined'].forEach(v => {
-    const btn = document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
-    if(btn){ btn.style.background=v==='start'?'var(--acc)':'transparent'; btn.style.color=v==='start'?'var(--gd)':'var(--gr)'; }
-  });
   closeEdit();
   renderAll();
   redrawArrows();
@@ -4325,8 +4370,9 @@ function applySubstitutionToEnd(sub, fieldPlayerId) {
 // ── Team Kit Color ──────────────────────────────────
 let selectedTeamColor = KIT_COLORS[0];
 
-function openMobKitColorSheet() {
-  const picker = document.getElementById('mobKitColorPicker');
+function buildKitColorPicker(containerId) {
+  const picker = document.getElementById(containerId);
+  if(!picker) return;
   picker.innerHTML = '';
   KIT_COLORS.forEach(c => {
     const d = document.createElement('div');
@@ -4338,7 +4384,61 @@ function openMobKitColorSheet() {
     };
     picker.appendChild(d);
   });
+}
+
+function openMobKitColorSheet() {
+  buildKitColorPicker('mobKitColorPicker');
   openMobSheet('sheetKitColor');
+}
+
+// ── NEW LINEUP SETUP WIZARD (mobile) ──
+// Shown once whenever a genuinely new lineup starts (new roster loaded,
+// roster imported, or "+ Neu") — see resetLineupForNewRoster(). Guides
+// formation then kit color before the user starts placing players; both
+// remain reachable anytime afterward via the header's quick-access buttons.
+let nlsStep = 1;
+
+function startNewLineupSetup() {
+  if(!isMobile()) return;
+  nlsStep = 1;
+  renderNlsStep();
+  openMobSheet('sheetNewLineupSetup');
+}
+
+function renderNlsStep() {
+  document.getElementById('nlsStep1').style.display = nlsStep === 1 ? 'block' : 'none';
+  document.getElementById('nlsStep2').style.display = nlsStep === 2 ? 'block' : 'none';
+  document.getElementById('nlsTitle').textContent = nlsStep === 1 ? 'Formation wählen' : 'Trikotfarbe wählen';
+  document.querySelectorAll('#sheetNewLineupSetup .nls-stepdot').forEach((d,i) => {
+    d.style.background = i <= nlsStep - 1 ? '#e8c84a' : 'rgba(255,255,255,.12)';
+  });
+  if(nlsStep === 1) buildFormationWizardBtns();
+  else buildKitColorPicker('mobKitColorPickerWizard');
+}
+
+function nlsGoStep(n) { nlsStep = n; renderNlsStep(); }
+
+function buildFormationWizardBtns() {
+  const g = document.getElementById('formGridWizard');
+  if(!g) return;
+  g.innerHTML = '';
+  Object.keys(FORMATIONS).forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'fbtn' + (k===curFormation?' active':'');
+    b.textContent = k;
+    b.onclick = () => { applyFormation(k, true); buildMobFormationBtns(); buildFormationWizardBtns(); };
+    g.appendChild(b);
+  });
+}
+
+function finishNewLineupSetup() {
+  players.forEach(p => { p.color = selectedTeamColor; });
+  const btn = document.getElementById('mobKitColorBtn');
+  if(btn) btn.style.background = selectedTeamColor;
+  closeMobSheet();
+  renderPitch();
+  saveNow();
+  showToast('Aufstellung bereit');
 }
 
 function applyTeamKitColor() {
@@ -4566,6 +4666,8 @@ function syncInfoToMob() {
 // Build mobile formation grid mirroring desktop
 function buildMobFormationBtns() {
   const g = document.getElementById('formGridMob');
+  const hdrBtn = document.getElementById('mobFormationBtn');
+  if(hdrBtn) hdrBtn.textContent = curFormation;
   if(!g) return;
   g.innerHTML = '';
   Object.keys(FORMATIONS).forEach(k => {
@@ -4574,20 +4676,6 @@ function buildMobFormationBtns() {
     b.textContent = k;
     b.onclick = () => { applyFormation(k, true); buildMobFormationBtns(); };
     g.appendChild(b);
-  });
-}
-
-function buildMobKitColors() {
-  const wrap = document.getElementById('kitColorsMob');
-  if(!wrap) return;
-  wrap.innerHTML = '';
-  KIT_COLORS.forEach(c => {
-    const d = document.createElement('div');
-    d.className = 'cpick';
-    d.style.cssText = `background:${c};width:28px;height:28px;`;
-    d.dataset.c = c;
-    d.onclick = () => { applyKitColor(c); };
-    wrap.appendChild(d);
   });
 }
 
