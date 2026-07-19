@@ -147,9 +147,11 @@ var code = 'javascript:(function(){' +
   'if(!players.length){alert("Keine Spieler erkannt.");return;}' +
   'var teamEl=document.querySelector("h1.data-header__headline-wrapper--oswald span:last-child")||document.querySelector(".data-header__headline-wrapper");' +
   'var team=teamEl?teamEl.textContent.trim().replace(/\\s+/g," "):"Unbekannt";' +
+  'var logoEl=document.querySelector(".data-header__profile-image")||document.querySelector(".data-header__profile-container img");' +
+  'var logoUrl=logoEl?logoEl.src:null;' +
   'var name=prompt("Kadername:",team);' +
   'if(!name)return;' +
-  'var payload=encodeURIComponent(JSON.stringify({team:name,players:players}));' +
+  'var payload=encodeURIComponent(JSON.stringify({team:name,players:players,logoUrl:logoUrl}));' +
   'window.open("https://scoutboard-pro.vercel.app/?import="+payload,"scoutboard_import");' +
 '})();';
 

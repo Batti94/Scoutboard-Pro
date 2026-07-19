@@ -182,6 +182,21 @@ textarea{resize:vertical;min-height:70px;}
 /* ── MOBILE COMPONENTS (hidden on desktop) ── */
 .mob-hdr-extra{display:none;align-items:center;gap:6px;margin-left:auto;}
 .mob-action-row{display:none;align-items:center;justify-content:flex-start;gap:6px;padding:4px 0 2px;flex-wrap:wrap;}
+.mob-back-home{display:none;background:none;border:none;color:var(--acc);font-size:.8rem;font-weight:700;padding:0 0 8px;cursor:pointer;}
+.mob-back-link{display:block;background:none;border:none;color:var(--acc);font-size:.8rem;font-weight:700;padding:0 0 14px;cursor:pointer;text-align:left;}
+.mob-home-title{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.04em;color:var(--wh);margin-bottom:2px;}
+.mob-home-sub{font-size:.78rem;color:var(--gr);margin-bottom:20px;}
+.mob-tile{display:flex;align-items:center;gap:14px;background:var(--gd);border:1px solid var(--pb);border-radius:14px;padding:16px;margin-bottom:12px;cursor:pointer;text-decoration:none;transition:border-color .18s,background .18s;-webkit-tap-highlight-color:transparent;}
+.mob-tile:active{background:rgba(255,255,255,.04);}
+.mob-tile-accent{border-color:rgba(232,200,74,.35);background:var(--accbg);}
+.mob-tile-icon{font-size:1.5rem;flex-shrink:0;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;}
+.mob-tile-accent .mob-tile-icon{background:rgba(232,200,74,.18);}
+.mob-tile-title{font-weight:700;font-size:.95rem;color:var(--wh);}
+.mob-tile-sub{font-size:.74rem;color:var(--gr);margin-top:2px;}
+.ac-crest{width:34px;height:34px;object-fit:contain;border-radius:7px;background:rgba(255,255,255,.06);flex-shrink:0;}
+.ac-crest-fallback{width:34px;height:34px;border-radius:7px;background:var(--accbg);color:var(--acc);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;flex-shrink:0;}
+.nls-roster-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.nls-roster-item.sel{border-color:#e8c84a;}
 .mob-act-btn{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.18);color:var(--wh);padding:0 12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;min-height:38px;display:flex;align-items:center;gap:4px;transition:background .15s;}
 .mob-act-btn:active{background:rgba(255,255,255,.22);}
 .mob-roster-sel{background:rgba(255,255,255,.06);border:1px solid var(--pb);color:var(--wh);padding:6px 8px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.76rem;max-width:140px;outline:none;}
@@ -280,6 +295,7 @@ textarea{resize:vertical;min-height:70px;}
 
   /* mobile action row (undo/reset/new) */
   .mob-action-row{display:flex!important;}
+  .mob-back-home{display:inline-block!important;}
 
   /* bigger view toggle */
   #btnStart,#btnEnd,#btnCombined{padding:10px 18px!important;font-size:.88rem!important;min-height:44px!important;}
@@ -479,6 +495,7 @@ textarea{resize:vertical;min-height:70px;}
   <!-- PITCH -->
   <div class="pitch-center">
     <div class="pitch-header">
+      <button class="mob-back-home" onclick="mobBackToChooser()">← Start</button>
       <div class="team-name" id="dTeam">Mein Team</div>
       <div class="match-info" id="dMatch">–</div>
       <div class="mob-action-row">
@@ -547,8 +564,43 @@ textarea{resize:vertical;min-height:70px;}
     </div>
   </div>
 
-  <!-- MOBILE: KADER TAB -->
+  <!-- MOBILE: AUFSTELLUNG-STARTSEITE (gezeigt, solange keine Aufstellung aktiv ist) -->
+  <div class="mob-main-view mob-hidden" id="mobViewChooser">
+    <div class="mob-home-title">Aufstellung</div>
+    <div class="mob-home-sub" id="mobHomeLineupSub">Noch keine gespeicherten Aufstellungen</div>
+    <div class="mob-tile mob-tile-accent" onclick="newLineup()">
+      <span class="mob-tile-icon">＋</span>
+      <div>
+        <div class="mob-tile-title">Neue Aufstellung</div>
+        <div class="mob-tile-sub">Kader, Formation und Trikotfarbe wählen</div>
+      </div>
+    </div>
+    <div class="mob-tile" onclick="showView('saved');switchArchive('lineups');document.getElementById('mnb-lineup')?.classList.add('active');">
+      <span class="mob-tile-icon">📋</span>
+      <div>
+        <div class="mob-tile-title">Gespeicherte Aufstellungen</div>
+        <div class="mob-tile-sub">Laden und weiterbearbeiten</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE: KADER-ÜBERSICHT (Kartenraster aller gespeicherten Kader) -->
+  <div class="mob-main-view mob-hidden" id="mobViewKaderGrid">
+    <div class="mob-home-title">Kader</div>
+    <div class="mob-home-sub" id="mobHomeKaderSub">Noch keine gespeicherten Kader</div>
+    <div class="archive-grid" id="mobKaderCards" style="margin-top:14px;"></div>
+    <a href="/bookmarklet" class="mob-tile" style="margin-top:14px;">
+      <span class="mob-tile-icon">⚽</span>
+      <div>
+        <div class="mob-tile-title">Kader importieren</div>
+        <div class="mob-tile-sub">Bookmarklet einrichten</div>
+      </div>
+    </a>
+  </div>
+
+  <!-- MOBILE: KADER-EDITOR (Spielerliste eines einzelnen Kaders) -->
   <div class="mob-main-view mob-hidden" id="mobViewRoster">
+    <button class="mob-back-link" onclick="mobKaderShowGrid()">← Übersicht</button>
     <!-- Kader-Header -->
     <div style="background:var(--gd);border-radius:10px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;">
       <div style="display:flex;align-items:center;gap:8px;">
@@ -755,10 +807,6 @@ textarea{resize:vertical;min-height:70px;}
       <span class="mnb-icon">👥</span>
       <span class="mnb-label">Kader</span>
     </button>
-    <button class="mnb" id="mnb-archive" onclick="mobNav('archive')">
-      <span class="mnb-icon">📁</span>
-      <span class="mnb-label">Archiv</span>
-    </button>
   </div>
 </nav>
 
@@ -774,25 +822,31 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
-<!-- SHEET: NEW LINEUP SETUP (guided formation + kit color, shown once per fresh lineup) -->
+<!-- SHEET: NEW LINEUP SETUP (guided Kader → Formation → Trikotfarbe, shown once per fresh lineup) -->
 <div class="mob-sheet" id="sheetNewLineupSetup">
   <div class="mob-sheet-handle"></div>
   <div class="mob-sheet-header">
-    <span class="mob-sheet-title" id="nlsTitle">Formation wählen</span>
+    <span class="mob-sheet-title" id="nlsTitle">Kader wählen</span>
     <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
   </div>
   <div class="mob-sheet-body">
     <div style="display:flex;gap:5px;margin-bottom:16px;">
       <div class="nls-stepdot" style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.12);"></div>
       <div class="nls-stepdot" style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.12);"></div>
+      <div class="nls-stepdot" style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.12);"></div>
     </div>
     <div id="nlsStep1">
-      <div class="form-grid" id="formGridWizard" style="margin-bottom:16px;"></div>
-      <button class="btn" style="width:100%;min-height:48px;" onclick="nlsGoStep(2)">Weiter</button>
+      <div id="nlsRosterList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:44vh;overflow-y:auto;"></div>
+      <button class="btn" id="nlsRosterNext" style="width:100%;min-height:48px;" onclick="nlsGoStep(2)">Weiter</button>
     </div>
     <div id="nlsStep2">
-      <div id="mobKitColorPickerWizard" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;"></div>
+      <div class="form-grid" id="formGridWizard" style="margin-bottom:16px;"></div>
       <button class="btn sec" style="width:100%;min-height:44px;margin-bottom:8px;" onclick="nlsGoStep(1)">Zurück</button>
+      <button class="btn" style="width:100%;min-height:48px;" onclick="nlsGoStep(3)">Weiter</button>
+    </div>
+    <div id="nlsStep3">
+      <div id="mobKitColorPickerWizard" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;"></div>
+      <button class="btn sec" style="width:100%;min-height:44px;margin-bottom:8px;" onclick="nlsGoStep(2)">Zurück</button>
       <button class="btn" style="width:100%;min-height:48px;" onclick="finishNewLineupSetup()">✓ Fertig</button>
     </div>
   </div>
@@ -1007,29 +1061,35 @@ textarea{resize:vertical;min-height:70px;}
 // ===================================================
 // CONSTANTS
 // ===================================================
+// margins: per-row fraction of pitch width kept empty on each side (smaller
+// = wider spread). Modeled on real tactical shape, not even spacing — e.g. a
+// 2-man holding pivot stays narrow/central (~.30) while a back four/five uses
+// most of the width (~.06-.08). Single-player rows (GK, lone striker, apex
+// CAM/regista) already center via the x-formula's count===1 case, so their
+// margin value is unused (kept as .5 for readability).
 const FORMATIONS = {
   // ── 3er Kette ──
-  '3-4-3':   { rows: [1,3,4,3],   ys: [.92,.76,.58,.40] },
-  '3-4-2-1': { rows: [1,3,4,2,1], ys: [.92,.76,.58,.42,.28] },
-  '3-5-2':   { rows: [1,3,5,2],   ys: [.92,.76,.56,.38] },
-  '3-5-1-1': { rows: [1,3,5,1,1], ys: [.92,.76,.56,.40,.26] },
-  '3-6-1':   { rows: [1,3,6,1],   ys: [.92,.76,.54,.36] },
+  '3-4-3':   { rows: [1,3,4,3],   ys: [.92,.76,.58,.40], margins: [.5,.16,.07,.13] },
+  '3-4-2-1': { rows: [1,3,4,2,1], ys: [.92,.76,.58,.42,.28], margins: [.5,.16,.07,.28,.5] },
+  '3-5-2':   { rows: [1,3,5,2],   ys: [.92,.76,.56,.38], margins: [.5,.16,.06,.27] },
+  '3-5-1-1': { rows: [1,3,5,1,1], ys: [.92,.76,.56,.40,.26], margins: [.5,.16,.06,.5,.5] },
+  '3-6-1':   { rows: [1,3,6,1],   ys: [.92,.76,.54,.36], margins: [.5,.16,.05,.5] },
   // ── 4er Kette ──
-  '4-2-3-1': { rows: [1,4,2,3,1], ys: [.92,.76,.62,.46,.30] },
-  '4-3-3':   { rows: [1,4,3,3],   ys: [.92,.76,.56,.38] },
-  '4-4-2':   { rows: [1,4,4,2],   ys: [.92,.76,.54,.36] },
-  '4-4-2 (R)':{ rows: [1,4,2,2,2],ys: [.92,.76,.60,.46,.30] },
-  '4-3-2-1': { rows: [1,4,3,2,1], ys: [.92,.76,.58,.42,.28] },
-  '4-5-1':   { rows: [1,4,5,1],   ys: [.92,.76,.52,.34] },
-  '4-1-4-1': { rows: [1,4,1,4,1], ys: [.92,.76,.62,.46,.30] },
-  '4-1-3-2': { rows: [1,4,1,3,2], ys: [.92,.76,.62,.46,.30] },
-  '4-2-4':   { rows: [1,4,2,4],   ys: [.92,.76,.60,.40] },
+  '4-2-3-1': { rows: [1,4,2,3,1], ys: [.92,.76,.62,.46,.30], margins: [.5,.08,.30,.15,.5] },
+  '4-3-3':   { rows: [1,4,3,3],   ys: [.92,.76,.56,.38], margins: [.5,.08,.18,.13] },
+  '4-4-2':   { rows: [1,4,4,2],   ys: [.92,.76,.54,.36], margins: [.5,.08,.07,.27] },
+  '4-4-2 (R)':{ rows: [1,4,2,2,2],ys: [.92,.76,.60,.46,.30], margins: [.5,.08,.30,.22,.27] },
+  '4-3-2-1': { rows: [1,4,3,2,1], ys: [.92,.76,.58,.42,.28], margins: [.5,.08,.18,.28,.5] },
+  '4-5-1':   { rows: [1,4,5,1],   ys: [.92,.76,.52,.34], margins: [.5,.08,.06,.5] },
+  '4-1-4-1': { rows: [1,4,1,4,1], ys: [.92,.76,.62,.46,.30], margins: [.5,.08,.5,.07,.5] },
+  '4-1-3-2': { rows: [1,4,1,3,2], ys: [.92,.76,.62,.46,.30], margins: [.5,.08,.5,.15,.27] },
+  '4-2-4':   { rows: [1,4,2,4],   ys: [.92,.76,.60,.40], margins: [.5,.08,.30,.09] },
   // ── 5er Kette ──
-  '5-3-2':   { rows: [1,5,3,2],   ys: [.92,.76,.54,.36] },
-  '5-4-1':   { rows: [1,5,4,1],   ys: [.92,.76,.52,.32] },
-  '5-2-3':   { rows: [1,5,2,3],   ys: [.92,.76,.58,.38] },
-  '5-2-1-2': { rows: [1,5,2,1,2], ys: [.92,.76,.60,.44,.28] },
-  '5-3-1-1': { rows: [1,5,3,1,1], ys: [.92,.76,.56,.40,.26] },
+  '5-3-2':   { rows: [1,5,3,2],   ys: [.92,.76,.54,.36], margins: [.5,.06,.18,.27] },
+  '5-4-1':   { rows: [1,5,4,1],   ys: [.92,.76,.52,.32], margins: [.5,.06,.07,.5] },
+  '5-2-3':   { rows: [1,5,2,3],   ys: [.92,.76,.58,.38], margins: [.5,.06,.30,.13] },
+  '5-2-1-2': { rows: [1,5,2,1,2], ys: [.92,.76,.60,.44,.28], margins: [.5,.06,.30,.5,.27] },
+  '5-3-1-1': { rows: [1,5,3,1,1], ys: [.92,.76,.56,.40,.26], margins: [.5,.06,.18,.5,.5] },
 };
 const KIT_COLORS = ['#f0f0eb','#e8c84a','#e05252','#5b9bd5','#9b59b6','#1abc9c','#e67e22','#2c3e50','#ecf0f1','#e74c3c'];
 const ARROW_COLORS = ['#e8c84a','#e05252','#5b9bd5','#ffffff','#1abc9c'];
@@ -1121,6 +1181,10 @@ async function init() {
   if(hint && !localStorage.getItem('sb_hint_dismissed') && savedRosters.length === 0) {
     hint.style.display = 'block';
   }
+  // Restored data with a specific lineup or named players in progress lands
+  // straight on the pitch; otherwise mobile starts on the Aufstellung chooser.
+  mobLineupActive = !!curLineupId || players.some(p => p.name);
+  if(isMobile()) mobNav('lineup');
   window.addEventListener('resize', () => { renderPitch(); redrawArrows(); });
   document.addEventListener('keydown', e => { if(e.key==='Escape') { closeEdit(); closeMobSheet(); }});
   checkUrlImport();
@@ -1177,7 +1241,7 @@ async function applyBookmarkletImport(data) {
 
   // Create and immediately load the new roster
   roster = newRoster;
-  await saveCurrentRosterWithName(data.team || 'Importierter Kader');
+  await saveCurrentRosterWithName(data.team || 'Importierter Kader', data.logoUrl || null);
   renderRoster();
   updateRosterSelect();
   showToast('✓ Kader importiert: ' + (data.team || 'Importierter Kader'));
@@ -1208,14 +1272,14 @@ async function mergeRemoteArchiveIntoLocal() {
   } catch(e) { console.error('[SB] archive merge failed', e); }
 }
 
-async function saveCurrentRosterWithName(name) {
+async function saveCurrentRosterWithName(name, logoUrl) {
   await mergeRemoteArchiveIntoLocal();
   // A freshly imported/created roster always starts its own clean lineup —
   // never inherit whatever was on the pitch (or in the Ende/Gesamt snapshots)
   // from whatever roster was active before.
   resetLineupForNewRoster();
   curRosterId = null;
-  const newR = {id:nextSrid++, name, roster:JSON.parse(JSON.stringify(roster))};
+  const newR = {id:nextSrid++, name, roster:JSON.parse(JSON.stringify(roster)), logoUrl: logoUrl || null};
   savedRosters.push(newR);
   curRosterId = newR.id;
   saveNow('saveCurrentRosterWithName: '+name);
@@ -1463,7 +1527,7 @@ function applyFormation(key, keepData) {
   let pid = 1;
   rows.forEach((count, ri) => {
     const y = ys[ri];
-    const mg = 0.06;
+    const mg = (f.margins && f.margins[ri] != null) ? f.margins[ri] : 0.06;
     for(let j=0;j<count;j++){
       const x = count===1 ? 0.5 : mg + (j/(count-1))*(1-2*mg);
       const old = keepData && players.find(p=>p.id===pid);
@@ -3136,9 +3200,6 @@ function resetLineupForNewRoster() {
     const btn = document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
     if(btn){ btn.style.background=v==='start'?'var(--acc)':'transparent'; btn.style.color=v==='start'?'var(--gd)':'var(--gr)'; }
   });
-  // On mobile, guide the user through formation + kit color before they start
-  // placing players — desktop already has both always visible in the sidebar.
-  if(isMobile()) setTimeout(startNewLineupSetup, 300);
 }
 
 function _doNewLineup() {
@@ -3155,6 +3216,11 @@ function _doNewLineup() {
   updateMatchDisplay();
   saveNow();
   showToast('Neue Aufstellung bereit');
+  // On mobile, guide the user through Kader → Formation → Trikotfarbe before
+  // they start placing players — desktop already has all three always
+  // visible in the sidebar. This is the single, deliberate trigger for the
+  // wizard; switching rosters via a dropdown mid-session must NOT re-open it.
+  if(isMobile()) setTimeout(startNewLineupSetup, 300);
 }
 
 function resetLineup() {
@@ -3422,6 +3488,8 @@ function loadLineup(id) {
     if(btn){ btn.style.background=v===curView?'var(--acc)':'transparent'; btn.style.color=v===curView?'var(--gd)':'var(--gr)'; }
   });
   showView('lineup');
+  mobLineupActive = true;
+  if(isMobile()) mobNav('lineup');
   showToast('Geladen: '+lu.name);
 }
 
@@ -3453,8 +3521,23 @@ function switchArchive(tab) {
   if(tab==='rosters') renderSavedRostersArchive();
 }
 
-function renderSavedRostersArchive() {
-  const wrap = document.getElementById('savedRostersContent');
+// initial letter fallback badge when a roster has no crest (or its crest 404s)
+function crestHtml(logoUrl, name) {
+  const initial = (name||'?').trim().charAt(0).toUpperCase() || '?';
+  if(!logoUrl) return `<div class="ac-crest-fallback">${initial}</div>`;
+  return `<img src="${logoUrl}" alt="" class="ac-crest" data-fallback="${initial}" onerror="this.outerHTML='<div class=&quot;ac-crest-fallback&quot;>'+this.dataset.fallback+'</div>'">`;
+}
+
+// Loading a roster from a card: mobile drills into the roster editor,
+// desktop goes straight to the pitch (its existing behavior).
+function loadRosterFromCard(id, name) {
+  loadSavedRoster(id);
+  if(isMobile()) { mobKaderShowEditor(); }
+  else { showView('lineup'); showToast('Kader geladen: '+name); }
+}
+
+function renderSavedRostersArchive(containerId) {
+  const wrap = document.getElementById(containerId || 'savedRostersContent');
   if(!wrap) return;
   if(!savedRosters.length) {
     wrap.innerHTML = '<div class="no-data" style="grid-column:1/-1;">Noch keine gespeicherten Kader.<br>Kader importieren und 💾 klicken.</div>';
@@ -3467,16 +3550,19 @@ function renderSavedRostersArchive() {
     const preview = r.roster.slice(0,6).map(p=>`<span class="ac-chip">${p.num ? p.num+' ' : ''}${p.name}</span>`).join('');
     const more = r.roster.length > 6 ? `<span class="ac-chip more">+${r.roster.length-6}</span>` : '';
     card.innerHTML = `
-      <div>
-        <div class="ac-team">${r.name}</div>
-        <div class="ac-meta" style="margin-top:4px;">
-          <span>${r.roster.length} Spieler</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${crestHtml(r.logoUrl, r.name)}
+        <div>
+          <div class="ac-team">${r.name}</div>
+          <div class="ac-meta" style="margin-top:2px;">
+            <span>${r.roster.length} Spieler</span>
+          </div>
         </div>
       </div>
       <div class="ac-players">${preview}${more}</div>
       <div class="ac-actions">
-        <button class="btn" onclick="loadSavedRoster(${r.id});showView('lineup');showToast('Kader geladen: ${r.name}')">Laden</button>
-        <button class="btn del" onclick="deleteSavedRoster(${r.id});renderSavedRostersArchive()">Löschen</button>
+        <button class="btn" onclick="loadRosterFromCard(${r.id}, '${r.name.replace(/'/g,"\\'")}')">Laden</button>
+        <button class="btn del" onclick="deleteSavedRoster(${r.id});renderSavedRostersArchive('${containerId||'savedRostersContent'}')">Löschen</button>
       </div>
     `;
     wrap.appendChild(card);
@@ -4165,6 +4251,23 @@ function showToast(msg){
 // ===================================================
 function isMobile(){ return window.innerWidth <= 700; }
 
+// True once the user is actively viewing a specific lineup on mobile (new or
+// loaded) — controls whether the "Aufstellung" tab shows the pitch or the
+// chooser (+ Neue Aufstellung / Gespeicherte Aufstellungen). Computed from
+// real data at startup (so restored in-progress work doesn't hide behind the
+// chooser after a reload) and updated explicitly at the few points where a
+// lineup starts or stops being "active" (finishNewLineupSetup, loadLineup,
+// mobBackToChooser).
+let mobLineupActive = false;
+
+function mobHideAllMainViews() {
+  const pitchCenter = document.querySelector('.pitch-center');
+  if(pitchCenter) pitchCenter.style.display = 'none';
+  ['mobViewChooser','mobViewKaderGrid','mobViewRoster'].forEach(id => {
+    document.getElementById(id)?.classList.add('mob-hidden');
+  });
+}
+
 function mobNav(tab) {
   document.querySelectorAll('.mnb').forEach(b=>b.classList.remove('active'));
   const btn = document.getElementById('mnb-'+tab);
@@ -4172,27 +4275,48 @@ function mobNav(tab) {
 
   closeMobSheet();
 
-  const pitchCenter = document.querySelector('.pitch-center');
-  const mobRoster   = document.getElementById('mobViewRoster');
-
-  // Ensure lineup view is the active .view for all 3 tabs except archive
-  if(tab !== 'archive' && !document.getElementById('viewLineup').classList.contains('active')) {
+  if(!document.getElementById('viewLineup').classList.contains('active')) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('viewLineup').classList.add('active');
   }
 
+  mobHideAllMainViews();
+
   if(tab === 'lineup') {
-    if(pitchCenter) pitchCenter.style.display = '';
-    if(mobRoster) mobRoster.classList.add('mob-hidden');
+    if(mobLineupActive) {
+      const pitchCenter = document.querySelector('.pitch-center');
+      if(pitchCenter) pitchCenter.style.display = '';
+    } else {
+      document.getElementById('mobHomeLineupSub').textContent =
+        savedLineups.length ? savedLineups.length+' gespeicherte Aufstellungen' : 'Noch keine gespeicherten Aufstellungen';
+      document.getElementById('mobViewChooser')?.classList.remove('mob-hidden');
+    }
   } else if(tab === 'roster') {
-    if(pitchCenter) pitchCenter.style.display = 'none';
-    if(mobRoster) mobRoster.classList.remove('mob-hidden');
-    renderMobRosterView();
-  } else if(tab === 'archive') {
-    if(pitchCenter) pitchCenter.style.display = '';
-    if(mobRoster) mobRoster.classList.add('mob-hidden');
-    showView('saved');
+    mobKaderShowGrid();
   }
+}
+
+// Kader tab: default card-grid view (browse all saved rosters)
+function mobKaderShowGrid() {
+  mobHideAllMainViews();
+  document.getElementById('mobHomeKaderSub').textContent =
+    savedRosters.length ? savedRosters.length+' gespeicherte Kader' : 'Noch keine gespeicherten Kader';
+  document.getElementById('mobViewKaderGrid')?.classList.remove('mob-hidden');
+  renderSavedRostersArchive('mobKaderCards');
+}
+
+// Kader tab: drill into the player-list editor for whichever roster is
+// currently loaded (curRosterId) — reached by tapping "Laden" on a card.
+function mobKaderShowEditor() {
+  mobHideAllMainViews();
+  document.getElementById('mobViewRoster')?.classList.remove('mob-hidden');
+  renderMobRosterView();
+}
+
+// Back out of an active lineup to the Aufstellung chooser.
+function mobBackToChooser() {
+  mobLineupActive = false;
+  mobNav('lineup');
 }
 
 function openMobSheet(id) {
@@ -4393,11 +4517,12 @@ function openMobKitColorSheet() {
 }
 
 // ── NEW LINEUP SETUP WIZARD (mobile) ──
-// Shown once whenever a genuinely new lineup starts (new roster loaded,
-// roster imported, or "+ Neu") — see resetLineupForNewRoster(). Guides
-// formation then kit color before the user starts placing players; both
-// remain reachable anytime afterward via the header's quick-access buttons.
+// Shown once whenever "+ Neu" starts a genuinely new lineup (see
+// _doNewLineup()) — guides Kader → Formation → Trikotfarbe, in that order,
+// before the user starts placing players. All three remain reachable
+// afterward via the header's quick-access buttons / Kader tab.
 let nlsStep = 1;
+const NLS_TITLES = { 1: 'Kader wählen', 2: 'Formation wählen', 3: 'Trikotfarbe wählen' };
 
 function startNewLineupSetup() {
   if(!isMobile()) return;
@@ -4407,17 +4532,37 @@ function startNewLineupSetup() {
 }
 
 function renderNlsStep() {
-  document.getElementById('nlsStep1').style.display = nlsStep === 1 ? 'block' : 'none';
-  document.getElementById('nlsStep2').style.display = nlsStep === 2 ? 'block' : 'none';
-  document.getElementById('nlsTitle').textContent = nlsStep === 1 ? 'Formation wählen' : 'Trikotfarbe wählen';
+  [1,2,3].forEach(n => { document.getElementById('nlsStep'+n).style.display = nlsStep === n ? 'block' : 'none'; });
+  document.getElementById('nlsTitle').textContent = NLS_TITLES[nlsStep];
   document.querySelectorAll('#sheetNewLineupSetup .nls-stepdot').forEach((d,i) => {
     d.style.background = i <= nlsStep - 1 ? '#e8c84a' : 'rgba(255,255,255,.12)';
   });
-  if(nlsStep === 1) buildFormationWizardBtns();
+  if(nlsStep === 1) buildRosterWizardList();
+  else if(nlsStep === 2) buildFormationWizardBtns();
   else buildKitColorPicker('mobKitColorPickerWizard');
 }
 
 function nlsGoStep(n) { nlsStep = n; renderNlsStep(); }
+
+function buildRosterWizardList() {
+  const g = document.getElementById('nlsRosterList');
+  const nextBtn = document.getElementById('nlsRosterNext');
+  if(!g) return;
+  if(!savedRosters.length) {
+    g.innerHTML = '<div class="no-data" style="padding:10px 0;">Noch kein Kader gespeichert.<br><a href="/bookmarklet" style="color:var(--acc);font-weight:700;">→ Kader importieren</a></div>';
+    if(nextBtn) { nextBtn.disabled = true; nextBtn.style.opacity = '.4'; }
+    return;
+  }
+  if(nextBtn) { nextBtn.disabled = false; nextBtn.style.opacity = ''; }
+  g.innerHTML = '';
+  savedRosters.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'nls-roster-item' + (r.id === curRosterId ? ' sel' : '');
+    item.innerHTML = `${crestHtml(r.logoUrl, r.name)}<div style="flex:1;"><div style="font-weight:600;">${r.name}</div><div style="font-size:.72rem;color:var(--gr);">${r.roster.length} Spieler</div></div>`;
+    item.onclick = () => { loadSavedRoster(r.id); nlsGoStep(2); };
+    g.appendChild(item);
+  });
+}
 
 function buildFormationWizardBtns() {
   const g = document.getElementById('formGridWizard');
@@ -4437,6 +4582,8 @@ function finishNewLineupSetup() {
   const btn = document.getElementById('mobKitColorBtn');
   if(btn) btn.style.background = selectedTeamColor;
   closeMobSheet();
+  mobLineupActive = true;
+  mobNav('lineup');
   renderPitch();
   saveNow();
   showToast('Aufstellung bereit');
