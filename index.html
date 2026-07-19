@@ -3498,6 +3498,21 @@ function _sbLogError(context, err) {
   console.error(parts.join(' | '), err);
 }
 
+// Every autosave (even a pure no-op one, on ANY open tab) stamps a fresh
+// _savedAt — so with two tabs open, each one's routine 15s tick looks
+// "newer" than the other purely from the timestamp, even when the actual
+// content is byte-identical. Comparing content (ignoring _savedAt) is what
+// actually tells us whether a resync is warranted, instead of just diffing
+// timestamps — otherwise two idle tabs perpetually "resync" each other,
+// each pull overwriting whatever the active tab is mid-editing.
+function _snapshotContentEqual(rawA, rawB) {
+  try {
+    const a = JSON.parse(rawA); delete a._savedAt;
+    const b = JSON.parse(rawB); delete b._savedAt;
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch(e) { return false; }
+}
+
 async function saveToSupabase(json, allowSkipIfStale) {
   if (!sbClient) return;
   if (!navigator.onLine) {
@@ -3518,9 +3533,16 @@ async function saveToSupabase(json, allowSkipIfStale) {
       if (remoteRaw) {
         const remoteSavedAt = JSON.parse(remoteRaw)._savedAt || 0;
         if (remoteSavedAt > _lastKnownSavedAt) {
-          console.warn('[SB] Remote is newer than what this tab last saw — pulling instead of overwriting');
-          // Always pull the newer data into this tab's actual state (not just
-          // the timestamp bookkeeping) — otherwise this tab stays stale and its
+          if (_snapshotContentEqual(remoteRaw, json)) {
+            // Only the timestamp is newer (another tab's routine autosave with
+            // no real changes) — nothing to actually resync, and nothing to
+            // write either since remote already matches this content.
+            _lastKnownSavedAt = remoteSavedAt;
+            return;
+          }
+          console.warn('[SB] Remote has genuinely different content — pulling instead of overwriting');
+          // Pull the newer data into this tab's actual state (not just the
+          // timestamp bookkeeping) — otherwise this tab stays stale and its
           // *next* ambient save would overwrite remote with outdated content.
           applyStorageData(remoteRaw);
           localStorage.setItem('sbpro_v5', remoteRaw);
@@ -3727,6 +3749,13 @@ async function refreshFromRemoteIfNewer() {
     if (!remoteRaw) return;
     const remoteSavedAt = JSON.parse(remoteRaw)._savedAt || 0;
     if (remoteSavedAt > _lastKnownSavedAt) {
+      const localRaw = localStorage.getItem('sbpro_v5');
+      if (localRaw && _snapshotContentEqual(remoteRaw, localRaw)) {
+        // Just a newer timestamp from another tab's no-op autosave — nothing
+        // actually differs, so there's nothing worth resyncing/announcing.
+        _lastKnownSavedAt = remoteSavedAt;
+        return;
+      }
       console.info('[SB] Newer data found on refocus — refreshing');
       applyStorageData(remoteRaw);
       localStorage.setItem('sbpro_v5', remoteRaw);
