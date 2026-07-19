@@ -308,9 +308,10 @@ body.mob-home-active .mob-hdr-extra{display:none!important;}
   .pitch-header .team-name,.pitch-header .match-info{display:none;}
   .pitch-header{padding:6px 0 2px;}
 
-  /* mobile action row (undo/reset/new) */
+  /* mobile action row (undo/reset/new/export) */
   .mob-action-row{display:flex!important;}
   .mob-back-home{display:inline-block!important;}
+  #btnExportCircle{display:none;} /* action row's Export button replaces this on mobile */
 
   /* bigger view toggle */
   #btnStart,#btnEnd,#btnCombined{padding:10px 18px!important;font-size:.88rem!important;min-height:44px!important;}
@@ -501,6 +502,7 @@ body.mob-home-active .mob-hdr-extra{display:none!important;}
         <button class="mob-act-btn" onclick="autoLineup()">⚡ Auto</button>
         <button class="mob-act-btn" onclick="undo()">↩ Undo</button>
         <button class="mob-act-btn" onclick="resetLineup()">↺ Reset</button>
+        <button class="mob-act-btn" onclick="openExportModal()">⬇ Export</button>
       </div>
       <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:8px;">
         <div style="display:flex;background:rgba(0,0,0,.35);border-radius:20px;padding:3px;gap:2px;">
@@ -517,10 +519,10 @@ body.mob-home-active .mob-hdr-extra{display:none!important;}
             Final
           </button>
         </div>
-        <button onclick="openExportModal()" title="Export als PNG"
+        <button id="btnExportCircle" onclick="openExportModal()" title="Export als Bild"
           style="background:rgba(0,0,0,.35);border:none;border-radius:50%;width:30px;height:30px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .18s;"
           onmouseenter="this.style.background='rgba(232,200,74,.25)'"
-          onmouseleave="this.style.background='rgba(0,0,0,.35)'">📷</button>
+          onmouseleave="this.style.background='rgba(0,0,0,.35)'">⬇</button>
       </div>
     </div>
     <div class="pitch-wrap" id="pitchWrap">
@@ -754,8 +756,8 @@ body.mob-home-active .mob-hdr-extra{display:none!important;}
 <!-- EXPORT MODAL -->
 <div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;">
   <div style="background:var(--gd);border:1px solid var(--pb);border-radius:14px;padding:24px;max-width:340px;width:92%;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.08em;color:var(--acc);margin-bottom:6px;">📷 Export als PNG</div>
-    <div style="font-size:.78rem;color:var(--gr);margin-bottom:18px;">Wähle welche Ansichten exportiert werden sollen. Jede Ansicht wird als eigenes Bild gespeichert.</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.08em;color:var(--acc);margin-bottom:6px;">⬇ Export als Bild</div>
+    <div style="font-size:.78rem;color:var(--gr);margin-bottom:18px;">Wähle welche Ansichten exportiert werden sollen. Alle gewählten Ansichten landen in einem Bild.</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:.88rem;font-weight:500;">
         <input type="checkbox" id="expStart" checked style="width:18px;height:18px;accent-color:var(--acc);cursor:pointer;">
@@ -773,7 +775,7 @@ body.mob-home-active .mob-hdr-extra{display:none!important;}
     <div id="exportProgress" style="display:none;font-size:.78rem;color:var(--acc);margin-bottom:12px;text-align:center;">Wird exportiert…</div>
     <div style="display:flex;gap:10px;">
       <button class="btn sec" style="flex:1;" onclick="closeExportModal()">Abbrechen</button>
-      <button class="btn" style="flex:1;" onclick="runExport()">📷 Exportieren</button>
+      <button class="btn" style="flex:1;" onclick="runExport()">⬇ Exportieren</button>
     </div>
   </div>
 </div>
@@ -867,24 +869,6 @@ body.mob-home-active .mob-hdr-extra{display:none!important;}
       <button class="btn" style="width:100%" onclick="addRosterMob()">+ Hinzufügen</button>
       <button class="btn sec" style="width:100%;font-size:.75rem;" onclick="triggerCSV()">📋 CSV Import</button>
     </div>
-  </div>
-</div>
-
-<!-- SHEET: TOOLS -->
-<div class="mob-sheet" id="sheetTools">
-  <div class="mob-sheet-handle"></div>
-  <div class="mob-sheet-header">
-    <span class="mob-sheet-title">Tools</span>
-    <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
-  </div>
-  <div class="mob-sheet-body" style="display:flex;flex-direction:column;gap:10px;padding-top:8px;">
-    <button class="btn" style="width:100%;min-height:52px;font-size:.9rem;" onclick="autoLineup();closeMobSheet()">⚡ Auto-Aufstellung</button>
-    <div style="height:1px;background:var(--pb);"></div>
-    <button class="btn sec" style="width:100%" onclick="resetLineup();closeMobSheet()">↺ Aufstellung zurücksetzen</button>
-    <button class="btn sec" style="width:100%" onclick="undo()">↩ Undo</button>
-    <button class="btn sec" style="width:100%" onclick="saveLineup();closeMobSheet()">💾 Aufstellung speichern</button>
-    <button class="btn sec" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="showView('saved');closeMobSheet()">📁 Archiv</button>
-    <button class="btn sec" style="width:100%" onclick="closeMobSheet();openExportModal()">📷 Export</button>
   </div>
 </div>
 
@@ -3792,6 +3776,25 @@ async function runExport() {
   progress.textContent = 'Wird gerendert…';
   document.querySelector('#exportModal .btn:last-child').disabled = true;
 
+  // On mobile, start the clipboard write right now — synchronously, still
+  // inside this click handler — passing it a promise for the image that
+  // resolves later once rendering finishes below. Browsers tie clipboard
+  // permission to the user gesture that triggered it; if we waited until
+  // after the (multi-second) rendering work to call clipboard.write(), the
+  // gesture would already be stale and the write would silently fail, the
+  // same way the old window.open() popup used to get blocked.
+  let resolveClipboardBlob = null;
+  let clipboardWritePromise = null;
+  if(isMobile() && navigator.clipboard && window.ClipboardItem) {
+    try {
+      const blobPromise = new Promise(res => { resolveClipboardBlob = res; });
+      clipboardWritePromise = navigator.clipboard.write([new ClipboardItem({'image/png': blobPromise})]);
+    } catch(e) {
+      resolveClipboardBlob = null;
+      clipboardWritePromise = null;
+    }
+  }
+
   const views = [];
   if(doStart) views.push({key:'start', label:'Start'});
   if(doEnd) views.push({key:'end', label:'Live'});
@@ -3967,39 +3970,56 @@ async function runExport() {
   const date = (document.getElementById('iDate').value||'').replace(/\./g,'-');
   const viewLabels = views.map(v=>v.label).join('_');
   const filename = `${team}_${viewLabels}${date?'_'+date:''}.png`;
-  const dataUrl = final.toDataURL('image/png');
-
-  // Direct download
-  const link = document.createElement('a');
-  link.download = filename;
-  link.href = dataUrl;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  // Open in new tab (clean — no hint text in image)
-  const tab = window.open();
-  if(tab) {
-    tab.document.write(`
-      <html>
-      <head><title>${filename}</title>
-      <style>body{margin:0;background:#0d1f13;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;}
-      .hint{color:#7a9080;font-family:sans-serif;font-size:13px;text-align:center;}
-      .hint strong{color:#e8c84a;}
-      img{max-width:100%;border-radius:4px;}</style>
-      </head>
-      <body>
-        <div class="hint">Rechtsklick auf das Bild → „Bild speichern unter" → <strong>${filename}</strong></div>
-        <img src="${dataUrl}">
-      </body></html>
-    `);
-    tab.document.close();
-  }
+  const blob = await new Promise(resolve => final.toBlob(resolve, 'image/png'));
 
   progress.style.display = 'none';
   document.querySelector('#exportModal .btn:last-child').disabled = false;
   closeExportModal();
-  showToast('Export abgeschlossen ✓');
+
+  if(!blob) { showToast('⚠️ Export fehlgeschlagen'); return; }
+
+  await deliverExportImage(blob, filename, resolveClipboardBlob, clipboardWritePromise);
+}
+
+async function deliverExportImage(blob, filename, resolveClipboardBlob, clipboardWritePromise) {
+  // 1) Clipboard copy — sufficient on its own: paste it anywhere (Notizen,
+  // WhatsApp, die Scoutingdatenbank, …) without needing to save a file.
+  if(clipboardWritePromise) {
+    resolveClipboardBlob(blob);
+    try {
+      await clipboardWritePromise;
+      showToast('✓ Bild kopiert – jetzt irgendwo einfügen');
+      return;
+    } catch(e) {
+      console.warn('[Export] Clipboard write failed', e);
+    }
+  }
+
+  // 2) Native share sheet as fallback (also lets them save or send it directly)
+  if(isMobile() && navigator.share && navigator.canShare) {
+    const file = new File([blob], filename, {type:'image/png'});
+    if(navigator.canShare({files:[file]})) {
+      try {
+        await navigator.share({files:[file], title: filename});
+        showToast('✓ Geteilt');
+        return;
+      } catch(e) {
+        if(e.name === 'AbortError') return; // user cancelled the share sheet
+        console.warn('[Export] Share failed', e);
+      }
+    }
+  }
+
+  // 3) Desktop (and last-resort mobile): reliable blob-URL download
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+  showToast('✓ Heruntergeladen: ' + filename);
 }
 
 async function switchLineupViewSilent(view) {
