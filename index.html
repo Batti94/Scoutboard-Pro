@@ -201,6 +201,12 @@ textarea{resize:vertical;min-height:70px;}
 .mob-tile-accent .mob-tile-icon{background:rgba(232,200,74,.18);}
 .mob-tile-title{font-weight:700;font-size:.95rem;color:var(--wh);}
 .mob-tile-sub{font-size:.74rem;color:var(--gr);margin-top:2px;}
+#mobViewHome{padding:0;}
+.mob-home-half{flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s;}
+.mob-home-half:active{background:rgba(255,255,255,.04);}
+.mob-home-half-top{border-bottom:1px solid var(--pb);}
+.mob-home-half-label{font-family:'Bebas Neue',sans-serif;font-size:2.1rem;letter-spacing:.06em;color:var(--wh);}
+body.mob-home-active .mob-hdr-extra{display:none!important;}
 .ac-crest{width:34px;height:34px;object-fit:contain;border-radius:7px;background:rgba(255,255,255,.06);flex-shrink:0;}
 .ac-crest-fallback{width:34px;height:34px;border-radius:7px;background:var(--accbg);color:var(--acc);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;flex-shrink:0;}
 .nls-roster-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -291,8 +297,8 @@ textarea{resize:vertical;min-height:70px;}
   /* lineup view: vertical stack, each sub-view fills it */
   #viewLineup{flex-direction:column;overflow:hidden;}
 
-  /* pitch-center: scrollable fill, enough room above bottom nav */
-  .pitch-center{flex:1;overflow-y:auto;padding:0 0 84px;display:flex;flex-direction:column;}
+  /* pitch-center: scrollable fill */
+  .pitch-center{flex:1;overflow-y:auto;padding:0 0 20px;display:flex;flex-direction:column;}
 
   /* mob roster bar visible */
   .mob-roster-bar{display:flex!important;}
@@ -317,11 +323,9 @@ textarea{resize:vertical;min-height:70px;}
   #subZone{display:none!important;}
 
   /* mob main views fill space */
-  .mob-main-view{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:12px 12px 80px;}
+  .mob-main-view{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:12px 12px 20px;}
   .mob-main-view.mob-hidden{display:none!important;}
 
-  /* bottom nav */
-  .mob-nav{display:flex!important;}
   .mob-sheet{display:flex!important;}
 
   /* edit panel as bottom sheet */
@@ -338,21 +342,6 @@ textarea{resize:vertical;min-height:70px;}
   /* hint text below pitch */
   .pitch-hint{display:none;}
 }
-
-/* BOTTOM NAV — hidden on desktop */
-.mob-nav{
-  display:none;
-  position:fixed;bottom:0;left:0;right:0;
-  background:var(--gd);
-  border-top:1px solid var(--pb);
-  z-index:90;
-  padding:6px 0 calc(6px + env(safe-area-inset-bottom));
-}
-.mob-nav-inner{display:flex;align-items:center;justify-content:space-around;width:100%;}
-.mnb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 10px;cursor:pointer;border-radius:8px;transition:all .18s;border:none;background:none;color:var(--gr);flex:1;}
-.mnb.active{color:var(--acc);}
-.mnb-icon{font-size:1.3rem;line-height:1;}
-.mnb-label{font-size:.58rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
 
 /* MOBILE SHEET (slide-up panel) */
 .mob-sheet{
@@ -572,7 +561,17 @@ textarea{resize:vertical;min-height:70px;}
     </div>
   </div>
 
-  <!-- MOBILE: AUFSTELLUNG-STARTSEITE (gezeigt, solange keine Aufstellung aktiv ist) -->
+  <!-- MOBILE: STARTSEITE (oben Aufstellung, unten Kader — 50/50 geteilt) -->
+  <div class="mob-main-view mob-hidden" id="mobViewHome">
+    <div class="mob-home-half mob-home-half-top" onclick="mobShowAufstellung()">
+      <div class="mob-home-half-label">Aufstellung</div>
+    </div>
+    <div class="mob-home-half mob-home-half-bottom" onclick="mobShowKader()">
+      <div class="mob-home-half-label">Kader</div>
+    </div>
+  </div>
+
+  <!-- MOBILE: AUFSTELLUNG-CHOOSER (gezeigt, solange keine Aufstellung aktiv ist) -->
   <div class="mob-main-view mob-hidden" id="mobViewChooser">
     <div class="mob-home-title">Aufstellung</div>
     <div class="mob-home-sub" id="mobHomeLineupSub">Noch keine gespeicherten Aufstellungen</div>
@@ -583,7 +582,7 @@ textarea{resize:vertical;min-height:70px;}
         <div class="mob-tile-sub">Kader, Formation und Trikotfarbe wählen</div>
       </div>
     </div>
-    <div class="mob-tile" onclick="showView('saved');switchArchive('lineups');document.getElementById('mnb-lineup')?.classList.add('active');">
+    <div class="mob-tile" onclick="showView('saved');switchArchive('lineups');">
       <span class="mob-tile-icon">📋</span>
       <div>
         <div class="mob-tile-title">Gespeicherte Aufstellungen</div>
@@ -598,7 +597,7 @@ textarea{resize:vertical;min-height:70px;}
     <div class="mob-home-sub" id="mobHomeKaderSub">Noch keine gespeicherten Kader</div>
     <div class="archive-grid" id="mobKaderCards" style="margin-top:14px;"></div>
     <a href="/bookmarklet" class="mob-tile" style="margin-top:14px;">
-      <span class="mob-tile-icon">⚽</span>
+      <span class="mob-tile-icon">＋</span>
       <div>
         <div class="mob-tile-title">Kader importieren</div>
         <div class="mob-tile-sub">Bookmarklet einrichten</div>
@@ -692,7 +691,7 @@ textarea{resize:vertical;min-height:70px;}
   <div class="stats-header" style="margin-bottom:12px;">Archiv</div>
   <div class="archive-tabs-wrap">
     <button class="archive-tab active" id="archiveTabLineups" onclick="switchArchive('lineups')">📋 Aufstellungen</button>
-    <button class="archive-tab" id="archiveTabRosters" onclick="switchArchive('rosters')">👥 Kader</button>
+    <button class="archive-tab" id="archiveTabRosters" onclick="switchArchive('rosters')">Kader</button>
   </div>
   <div id="archiveLineups"><div class="archive-grid" id="savedContent"></div></div>
   <div id="archiveRosters" style="display:none;">
@@ -805,19 +804,6 @@ textarea{resize:vertical;min-height:70px;}
 <!-- MOBILE OVERLAY -->
 <div class="mob-overlay" id="mobOverlay" onclick="closeMobSheet()"></div>
 
-<!-- MOBILE BOTTOM NAV -->
-<nav class="mob-nav">
-  <div class="mob-nav-inner">
-    <button class="mnb active" id="mnb-lineup" onclick="mobNav('lineup')">
-      <span class="mnb-icon">⚽</span>
-      <span class="mnb-label">Aufstellung</span>
-    </button>
-    <button class="mnb" id="mnb-roster" onclick="mobNav('roster')">
-      <span class="mnb-icon">👥</span>
-      <span class="mnb-label">Kader</span>
-    </button>
-  </div>
-</nav>
 
 <!-- SHEET: FORMATION -->
 <div class="mob-sheet" id="sheetFormation">
@@ -1178,9 +1164,9 @@ async function init() {
     hint.style.display = 'block';
   }
   // Restored data with a specific lineup or named players in progress lands
-  // straight on the pitch; otherwise mobile starts on the Aufstellung chooser.
+  // straight on the pitch; otherwise mobile starts on the top-level start screen.
   mobLineupActive = !!curLineupId || players.some(p => p.name);
-  if(isMobile()) mobNav('lineup');
+  if(isMobile()) { if(mobLineupActive) mobShowAufstellung(); else mobShowHome(); }
   window.addEventListener('resize', () => { renderPitch(); redrawArrows(); });
   document.addEventListener('keydown', e => { if(e.key==='Escape') { closeEdit(); closeMobSheet(); }});
   checkUrlImport();
@@ -1476,16 +1462,6 @@ function showView(v) {
   const idx = ['lineup','saved'].indexOf(v);
   if(tabs[idx]) tabs[idx].classList.add('active');
   if(v==='saved') renderSavedView();
-  // sync mobile bottom nav state
-  if(isMobile()) {
-    document.querySelectorAll('.mnb').forEach(b=>b.classList.remove('active'));
-    if(v==='saved') { const a=document.getElementById('mnb-archive'); if(a)a.classList.add('active'); }
-    else if(v==='lineup') { const a=document.getElementById('mnb-lineup'); if(a)a.classList.add('active'); }
-    if(v==='lineup') {
-      const pc=document.querySelector('.pitch-center'); if(pc) pc.style.display='';
-      const mr=document.getElementById('mobViewRoster'); if(mr) mr.classList.add('mob-hidden');
-    }
-  }
 }
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 
@@ -3271,7 +3247,7 @@ function loadLineup(id) {
   });
   showView('lineup');
   mobLineupActive = true;
-  if(isMobile()) mobNav('lineup');
+  if(isMobile()) mobShowAufstellung();
   showToast('Geladen: '+lu.name);
 }
 
@@ -4049,41 +4025,55 @@ let mobLineupActive = false;
 function mobHideAllMainViews() {
   const pitchCenter = document.querySelector('.pitch-center');
   if(pitchCenter) pitchCenter.style.display = 'none';
-  ['mobViewChooser','mobViewKaderGrid','mobViewRoster'].forEach(id => {
+  ['mobViewHome','mobViewChooser','mobViewKaderGrid','mobViewRoster'].forEach(id => {
     document.getElementById(id)?.classList.add('mob-hidden');
   });
 }
 
-function mobNav(tab) {
-  document.querySelectorAll('.mnb').forEach(b=>b.classList.remove('active'));
-  const btn = document.getElementById('mnb-'+tab);
-  if(btn) btn.classList.add('active');
-
+function mobEnsureLineupViewActive() {
   closeMobSheet();
-
   if(!document.getElementById('viewLineup').classList.contains('active')) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('viewLineup').classList.add('active');
   }
+}
 
+// Top-level start screen: just the two big halves, minimal header (no
+// roster-select/formation/color/save controls — those belong to whichever
+// section you're actually working in).
+function mobShowHome() {
+  mobEnsureLineupViewActive();
   mobHideAllMainViews();
+  document.body.classList.add('mob-home-active');
+  document.getElementById('mobViewHome')?.classList.remove('mob-hidden');
+}
 
-  if(tab === 'lineup') {
-    if(mobLineupActive) {
-      const pitchCenter = document.querySelector('.pitch-center');
-      if(pitchCenter) pitchCenter.style.display = '';
-    } else {
-      document.getElementById('mobHomeLineupSub').textContent =
-        savedLineups.length ? savedLineups.length+' gespeicherte Aufstellungen' : 'Noch keine gespeicherten Aufstellungen';
-      document.getElementById('mobViewChooser')?.classList.remove('mob-hidden');
-    }
-  } else if(tab === 'roster') {
-    mobKaderShowGrid();
+// Tapping "Aufstellung" on the start screen: resume the pitch if a lineup is
+// already in progress, otherwise the New/Gespeichert chooser.
+function mobShowAufstellung() {
+  mobEnsureLineupViewActive();
+  document.body.classList.remove('mob-home-active');
+  mobHideAllMainViews();
+  if(mobLineupActive) {
+    const pitchCenter = document.querySelector('.pitch-center');
+    if(pitchCenter) pitchCenter.style.display = '';
+  } else {
+    document.getElementById('mobHomeLineupSub').textContent =
+      savedLineups.length ? savedLineups.length+' gespeicherte Aufstellungen' : 'Noch keine gespeicherten Aufstellungen';
+    document.getElementById('mobViewChooser')?.classList.remove('mob-hidden');
   }
 }
 
-// Kader tab: default card-grid view (browse all saved rosters)
+// Tapping "Kader" on the start screen
+function mobShowKader() {
+  document.body.classList.remove('mob-home-active');
+  mobKaderShowGrid();
+}
+
+// Kader card-grid view (browse all saved rosters)
 function mobKaderShowGrid() {
+  mobEnsureLineupViewActive();
+  document.body.classList.remove('mob-home-active');
   mobHideAllMainViews();
   document.getElementById('mobHomeKaderSub').textContent =
     savedRosters.length ? savedRosters.length+' gespeicherte Kader' : 'Noch keine gespeicherten Kader';
@@ -4091,24 +4081,27 @@ function mobKaderShowGrid() {
   renderSavedRostersArchive('mobKaderCards');
 }
 
-// Kader tab: drill into the player-list editor for whichever roster is
-// currently loaded (curRosterId) — reached by tapping "Laden" on a card.
+// Drill into the player-list editor for whichever roster is currently loaded
+// (curRosterId) — reached by tapping "Laden" on a card.
 function mobKaderShowEditor() {
   mobHideAllMainViews();
   document.getElementById('mobViewRoster')?.classList.remove('mob-hidden');
   renderMobRosterView();
 }
 
-// Back out of an active lineup to the Aufstellung chooser.
+// "← Start" on the pitch: step back one level to the Aufstellung chooser
+// (not all the way to the top-level start screen — that's the logo's job).
 function mobBackToChooser() {
   mobLineupActive = false;
-  mobNav('lineup');
+  mobShowAufstellung();
 }
 
-// Header logo click — always a safe way back to a known starting point.
+// Header logo click — always jumps all the way back to the top-level start
+// screen on mobile; on desktop, the closest equivalent (lineup view, any
+// edit panel closed).
 function goHome() {
   closeEdit();
-  if (isMobile()) mobBackToChooser();
+  if (isMobile()) mobShowHome();
   else showView('lineup');
 }
 
@@ -4118,17 +4111,12 @@ function openMobSheet(id) {
   document.getElementById('mobOverlay').classList.add('show');
 }
 
-function closeMobSheet(resetNav=true) {
+function closeMobSheet() {
   // If player-edit sheet was open, clear selection
   const playerSheetOpen = document.getElementById('sheetPlayerEdit')?.classList.contains('open');
   document.querySelectorAll('.mob-sheet').forEach(s=>s.classList.remove('open'));
   document.getElementById('mobOverlay').classList.remove('show');
   if(playerSheetOpen) { selId = null; renderPitch(); }
-  if(resetNav) {
-    document.querySelectorAll('.mnb').forEach(b=>b.classList.remove('active'));
-    const fn = document.getElementById('mnb-lineup');
-    if(fn) fn.classList.add('active');
-  }
 }
 
 
@@ -4285,7 +4273,7 @@ function finishNewLineupSetup() {
   if(btn) btn.style.background = selectedTeamColor;
   closeMobSheet();
   mobLineupActive = true;
-  mobNav('lineup');
+  mobShowAufstellung();
   renderPitch();
   saveNow();
   showToast('Aufstellung bereit');
