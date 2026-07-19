@@ -311,7 +311,7 @@ body.mob-home-active .mob-hdr-extra{display:none!important;}
   /* mobile action row (undo/reset/new/export) */
   .mob-action-row{display:flex!important;}
   .mob-back-home{display:inline-block!important;}
-  #btnExportCircle{display:none;} /* action row's Export button replaces this on mobile */
+  #btnExportCircle{display:none!important;} /* action row's Export button replaces this on mobile; !important needed to override its inline display:flex */
 
   /* bigger view toggle */
   #btnStart,#btnEnd,#btnCombined{padding:10px 18px!important;font-size:.88rem!important;min-height:44px!important;}
@@ -1237,8 +1237,6 @@ async function mergeRemoteArchiveIntoLocal() {
 
     nextSrid = Math.max(nextSrid, savedRosters.length ? Math.max(...savedRosters.map(r=>r.id)) + 1 : 1);
     nextLid  = Math.max(nextLid,  savedLineups.length  ? Math.max(...savedLineups.map(l=>l.id))  + 1 : 1);
-
-    _lastKnownSavedAt = Math.max(_lastKnownSavedAt, remote._savedAt || 0);
   } catch(e) { console.error('[SB] archive merge failed', e); }
 }
 
@@ -3477,11 +3475,6 @@ try {
 let _sbPendingSave = null;
 let _sbSaveFailCount = 0;
 
-// _savedAt of the last state this tab is known to have loaded/written.
-// Used to detect when another tab/device has saved something newer, so a
-// stale tab's autosave doesn't blindly overwrite it (last-write-wins race).
-let _lastKnownSavedAt = 0;
-
 function _sbLogError(context, err) {
   // Log all available Supabase error fields for easier debugging
   const parts = [`[SB] ${context}`];
@@ -3493,22 +3486,16 @@ function _sbLogError(context, err) {
   console.error(parts.join(' | '), err);
 }
 
-// Every autosave (even a pure no-op one, on ANY open tab) stamps a fresh
-// _savedAt — so with two tabs open, each one's routine 15s tick looks
-// "newer" than the other purely from the timestamp, even when the actual
-// content is byte-identical. Comparing content (ignoring _savedAt) is what
-// actually tells us whether a resync is warranted, instead of just diffing
-// timestamps — otherwise two idle tabs perpetually "resync" each other,
-// each pull overwriting whatever the active tab is mid-editing.
-function _snapshotContentEqual(rawA, rawB) {
-  try {
-    const a = JSON.parse(rawA); delete a._savedAt;
-    const b = JSON.parse(rawB); delete b._savedAt;
-    return JSON.stringify(a) === JSON.stringify(b);
-  } catch(e) { return false; }
-}
-
-async function saveToSupabase(json, allowSkipIfStale) {
+// This device is always the source of truth for its own active session.
+// saveToSupabase() only ever pushes local state to the cloud — it never
+// reads remote back to "reconcile" or overwrite in-memory state. An active
+// editing session (build a lineup, lock the phone, come back 5 minutes
+// later) must never be silently reset by a background sync process; the
+// only place remote data is pulled into the live UI is loadStorage() at a
+// fresh page load. Cross-device visibility still works (whatever this
+// device last pushed is what the next device sees when it loads), it just
+// never fights with whatever the user is actively doing right now.
+async function saveToSupabase(json) {
   if (!sbClient) return;
   if (!navigator.onLine) {
     console.info('[SB] Offline — queuing save for retry');
@@ -3516,59 +3503,17 @@ async function saveToSupabase(json, allowSkipIfStale) {
     return;
   }
   try {
-    // Guard against a stale, idle background tab clobbering newer data another
-    // tab/device already saved since we last synced. Only applies to passive
-    // ambient autosaves (the 15s timer, backgrounding, page close) — NOT to an
-    // explicit user action (import, save lineup, etc.), which must always make
-    // it to the cloud. Without that distinction, two tabs left open at once
-    // would perpetually "skip" each other's autosave and neither would ever
-    // actually write, silently breaking cloud sync entirely.
-    if (allowSkipIfStale) {
-      const remoteRaw = await loadFromSupabase();
-      if (remoteRaw) {
-        const remoteSavedAt = JSON.parse(remoteRaw)._savedAt || 0;
-        if (remoteSavedAt > _lastKnownSavedAt) {
-          if (_snapshotContentEqual(remoteRaw, json)) {
-            // Only the timestamp is newer (another tab's routine autosave with
-            // no real changes) — nothing to actually resync, and nothing to
-            // write either since remote already matches this content.
-            _lastKnownSavedAt = remoteSavedAt;
-            return;
-          }
-          console.warn('[SB] Remote has genuinely different content — pulling instead of overwriting');
-          // Pull the newer data into this tab's actual state (not just the
-          // timestamp bookkeeping) — otherwise this tab stays stale and its
-          // *next* ambient save would overwrite remote with outdated content.
-          applyStorageData(remoteRaw);
-          localStorage.setItem('sbpro_v5', remoteRaw);
-          _lastKnownSavedAt = remoteSavedAt;
-          refreshUIFromState();
-          if (document.visibilityState === 'visible' && document.hasFocus()) {
-            showToast('🔄 Daten von anderem Gerät aktualisiert');
-          }
-          return;
-        }
-      }
-    }
-
     const upsertPromise = sbClient
       .from(SB_TABLE)
       .upsert({ key: SB_KEY, data: json }, { onConflict: 'key' });
     // On a slow connection (e.g. stadium WiFi) the request can legitimately
     // take longer than SB_TIMEOUT_MS to come back yet still succeed on the
     // server. We stop waiting for UI purposes below, but the request itself
-    // keeps running in the background — if we didn't reconcile it here, a
-    // late success would leave _lastKnownSavedAt behind reality. The NEXT
-    // ambient sync tick would then see remote as "newer" than what this same
-    // tab already knows (because of its own delayed write), mistake it for a
-    // change from another device, and pull-and-overwrite everything the user
-    // has done since — which is exactly the "Daten von anderem Gerät
-    // aktualisiert" toast firing on a solo, single-device session.
+    // keeps running in the background — reconcile the pending-retry bookkeeping
+    // whenever it does settle, so a slow-but-successful write doesn't also
+    // trigger a redundant retry later.
     upsertPromise.then(({error: lateError}) => {
-      if (!lateError) {
-        _lastKnownSavedAt = Math.max(_lastKnownSavedAt, JSON.parse(json)._savedAt || 0);
-        if (_sbPendingSave === json) { _sbPendingSave = null; _sbSaveFailCount = 0; }
-      }
+      if (!lateError && _sbPendingSave === json) { _sbPendingSave = null; _sbSaveFailCount = 0; }
     }).catch(()=>{});
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('timeout')), SB_TIMEOUT_MS)
@@ -3583,7 +3528,6 @@ async function saveToSupabase(json, allowSkipIfStale) {
     }
     _sbPendingSave = null;
     _sbSaveFailCount = 0;
-    _lastKnownSavedAt = JSON.parse(json)._savedAt || _lastKnownSavedAt;
     console.info('[SB] Saved OK');
   } catch(e) {
     _sbLogError('save exception', e);
@@ -3633,11 +3577,11 @@ window.addEventListener('offline', () => console.info('[SB] Went offline'));
 // ===================================================
 // PERSIST
 // ===================================================
-function saveStorage(allowSkipIfStale) {
+function saveStorage() {
   try {
     if(curView !== 'combined') snapshots[curView] = getSnapshot();
     const data = {
-      _savedAt: Date.now(),   // ← timestamp lets loadStorage pick the newer source
+      _savedAt: Date.now(),
       curFormation, players, roster, subs,
       savedLineups, savedRosters,
       curRosterId, curLineupId, nextSrid,
@@ -3655,8 +3599,8 @@ function saveStorage(allowSkipIfStale) {
     localStorage.setItem('sbpro_v5', json);
     const verify = localStorage.getItem('sbpro_v5');
     if(!verify) throw new Error('localStorage verify failed');
-    // Fire-and-forget Supabase sync
-    saveToSupabase(json, allowSkipIfStale);
+    // Fire-and-forget Supabase push — never reads remote back mid-session
+    saveToSupabase(json);
   } catch(e) {
     console.error('[persist] saveStorage error:', e.message, e);
     showToast('⚠️ Speichern fehlgeschlagen!');
@@ -3700,21 +3644,18 @@ function applyStorageData(raw) {
 }
 
 async function loadStorage() {
-  // Supabase is the single source of truth for cross-device sync.
-  // localStorage is the offline fallback only.
-  //
-  // NOTE: do NOT use timestamps here to decide between sources.
-  // autosave/pagehide/visibilitychange stamp Date.now() onto every save,
-  // so a device that loaded remote data and then autosaved will always have
-  // a "newer" local timestamp — breaking cross-device sync.
-  // (_savedAt is still recorded into _lastKnownSavedAt below — that's used
-  // separately by saveToSupabase() to detect a stale-tab overwrite race.)
+  // Supabase is the single source of truth for cross-device sync, but ONLY
+  // at a fresh page load — this is the one moment it's safe to pull remote
+  // state into the live UI, since no local unsaved edits can exist yet in a
+  // brand-new JS context. Once the session is running, nothing pulls from
+  // remote again until the page is loaded fresh next time (see saveToSupabase
+  // for why: an active editing session must never be silently overwritten by
+  // a background sync).
   const remoteRaw = await loadFromSupabase();
   if(remoteRaw) {
     console.info('[persist] loaded from Supabase');
     applyStorageData(remoteRaw);
     localStorage.setItem('sbpro_v5', remoteRaw);
-    _lastKnownSavedAt = JSON.parse(remoteRaw)._savedAt || 0;
     return;
   }
   // Supabase unavailable (offline, timeout, error) → fall back to localStorage
@@ -3724,61 +3665,24 @@ async function loadStorage() {
   if(localRaw) {
     console.info('[persist] Supabase unavailable — loaded from localStorage');
     applyStorageData(localRaw);
-    try { _lastKnownSavedAt = JSON.parse(localRaw)._savedAt || 0; } catch(e){}
   }
-}
-
-// Re-render everything from current in-memory state (players/roster/snapshots/etc.)
-// after applyStorageData() has swapped in newer remote data mid-session.
-// Mirrors the render sequence run once at startup in init().
-function refreshUIFromState() {
-  applyFormation(curFormation, false);
-  updateRosterSelect();
-  renderSavedRosterList();
-  renderLineupList();
-  switchLineupView(curView);
 }
 
 // Save when leaving page — use all three events for cross-browser/mobile coverage:
 // - beforeunload: desktop browsers
 // - pagehide: iOS Safari (beforeunload is unreliable there)
 // - visibilitychange hidden: Android Chrome background tab
-window.addEventListener('beforeunload', () => saveStorage(true));
-window.addEventListener('pagehide', () => saveStorage(true));
+// Becoming visible again (unlocking the phone, switching back to the tab)
+// intentionally does NOT pull from remote — the session just resumes exactly
+// where it was left, matching a single active device building one lineup.
+window.addEventListener('beforeunload', () => saveStorage());
+window.addEventListener('pagehide', () => saveStorage());
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') saveStorage(true);
-  else if (document.visibilityState === 'visible') refreshFromRemoteIfNewer();
+  if (document.visibilityState === 'hidden') saveStorage();
 });
 
-// When a tab regains focus (e.g. switching back to a tab left open earlier),
-// proactively pull any newer state saved elsewhere in the meantime instead of
-// waiting for this tab's own autosave to notice the conflict.
-async function refreshFromRemoteIfNewer() {
-  if (!sbClient || !navigator.onLine) return;
-  try {
-    const remoteRaw = await loadFromSupabase();
-    if (!remoteRaw) return;
-    const remoteSavedAt = JSON.parse(remoteRaw)._savedAt || 0;
-    if (remoteSavedAt > _lastKnownSavedAt) {
-      const localRaw = localStorage.getItem('sbpro_v5');
-      if (localRaw && _snapshotContentEqual(remoteRaw, localRaw)) {
-        // Just a newer timestamp from another tab's no-op autosave — nothing
-        // actually differs, so there's nothing worth resyncing/announcing.
-        _lastKnownSavedAt = remoteSavedAt;
-        return;
-      }
-      console.info('[SB] Newer data found on refocus — refreshing');
-      applyStorageData(remoteRaw);
-      localStorage.setItem('sbpro_v5', remoteRaw);
-      _lastKnownSavedAt = remoteSavedAt;
-      refreshUIFromState();
-      showToast('🔄 Daten von anderem Gerät aktualisiert');
-    }
-  } catch(e) { console.error('[SB] refresh-on-focus check failed', e); }
-}
-
 // Auto-save every 15s (skip if offline to avoid log noise)
-setInterval(() => { if (navigator.onLine !== false) saveStorage(true); }, 15000);
+setInterval(() => { if (navigator.onLine !== false) saveStorage(); }, 15000);
 
 // ===================================================
 // PRINT
