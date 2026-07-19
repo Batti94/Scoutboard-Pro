@@ -95,6 +95,7 @@ textarea{resize:vertical;min-height:70px;}
 .player{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:pointer;transform:translate(-50%,-50%);z-index:10;user-select:none;-webkit-user-select:none;transition:transform .12s;}
 .player:hover{transform:translate(-50%,-50%) scale(1.08);}
 .player.sel .pdot{box-shadow:0 0 0 3px var(--acc),0 4px 14px rgba(0,0,0,.5);}
+.player.longpress-pending .pdot{transform:scale(1.18);box-shadow:0 0 0 4px rgba(232,200,74,.55),0 4px 14px rgba(0,0,0,.5);}
 .pdot{width:clamp(32px,5vw,44px);height:clamp(32px,5vw,44px);border-radius:50%;background:var(--wh);border:2.5px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:clamp(.85rem,1.4vw,1.1rem);color:var(--gd);box-shadow:0 3px 10px rgba(0,0,0,.45);position:relative;transition:all .15s;}
 .pname{margin-top:3px;font-size:clamp(.52rem, 1.1vw, .78rem);font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.8);white-space:nowrap;text-align:center;background:rgba(0,0,0,.38);padding:1px 5px;border-radius:3px;max-width:90px;overflow:visible;}
 /* stats badges */
@@ -1163,10 +1164,9 @@ async function init() {
   if(hint && !localStorage.getItem('sb_hint_dismissed') && savedRosters.length === 0) {
     hint.style.display = 'block';
   }
-  // Restored data with a specific lineup or named players in progress lands
-  // straight on the pitch; otherwise mobile starts on the top-level start screen.
-  mobLineupActive = !!curLineupId || players.some(p => p.name);
-  if(isMobile()) { if(mobLineupActive) mobShowAufstellung(); else mobShowHome(); }
+  // Visiting the site always lands on the top-level start screen — never
+  // silently resumes straight into whatever pitch state was last in memory.
+  if(isMobile()) mobShowHome();
   window.addEventListener('resize', () => { renderPitch(); redrawArrows(); });
   document.addEventListener('keydown', e => { if(e.key==='Escape') { closeEdit(); closeMobSheet(); }});
   checkUrlImport();
@@ -1797,8 +1797,9 @@ function renderPitch() {
       });
       el.addEventListener('contextmenu', e => e.preventDefault());
 
-      // Touch: long-press = arrow, short tap or drag = move
-      el.addEventListener('touchstart', e => { startDragTouch(e,p.id); }, {passive:false});
+      // Touch: long-press (without moving) = draw an arrow; short tap or
+      // immediate drag = select / move, same as before.
+      el.addEventListener('touchstart', e => { onPlayerTouchStart(e, p.id, el); }, {passive:false});
       el.addEventListener('click', e => { e.stopPropagation(); selectPlayer(p.id); });
 
       // Drop target for roster dragging (Start: assign a starter; Live: record a substitution)
@@ -2879,30 +2880,36 @@ function maybeDrawArrow(pid, startPos) {
   }
 }
 
-// Right-click drag: draw arrow from player without moving them
+// Right-click drag (desktop) / long-press then drag (touch): draw an arrow
+// from a player without moving them.
 let arrowDragId = null;
 let arrowDragStart = null;
 
 function startArrowDrag(e, pid) {
   e.preventDefault();
   e.stopPropagation();
-  const p = players.find(x=>x.id===pid);
-  if(!p || !p.name) return;
-  arrowDragId = pid;
-  arrowDragStart = {x: p.x, y: p.y};
+  if(!_beginArrowDrag(pid)) return;
   document.addEventListener('mousemove', onArrowDragMove);
   document.addEventListener('mouseup', onArrowDragEnd);
 }
 
-function onArrowDragMove(e) {
+function _beginArrowDrag(pid) {
+  const p = players.find(x=>x.id===pid);
+  if(!p || !p.name) return false;
+  arrowDragId = pid;
+  arrowDragStart = {x: p.x, y: p.y};
+  return true;
+}
+
+function _arrowDragMoveCore(clientX, clientY) {
   if(!arrowDragId) return;
   // Draw live preview line on canvas
   const pitch = document.getElementById('pitch');
   const rect = pitch.getBoundingClientRect();
   const cv = document.getElementById('arrowCanvas');
   const W = cv.width, H = cv.height;
-  const ex = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-  const ey = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+  const ex = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const ey = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
   // Redraw existing arrows + preview
   const ctx = cv.getContext('2d');
   ctx.clearRect(0,0,W,H);
@@ -2913,13 +2920,13 @@ function onArrowDragMove(e) {
   drawArrow(ctx, arrowDragStart.x*W, arrowDragStart.y*H, ex*W, ey*H, curArrowColor, false);
 }
 
-function onArrowDragEnd(e) {
+function _arrowDragEndCore(clientX, clientY) {
   if(!arrowDragId) return;
   const pitch = document.getElementById('pitch');
   const rect = pitch.getBoundingClientRect();
   const W = pitch.offsetWidth, H = pitch.offsetHeight;
-  let ex = Math.max(0.03, Math.min(0.97, (e.clientX - rect.left) / rect.width));
-  let ey = Math.max(0.03, Math.min(0.97, (e.clientY - rect.top) / rect.height));
+  let ex = Math.max(0.03, Math.min(0.97, (clientX - rect.left) / rect.width));
+  let ey = Math.max(0.03, Math.min(0.97, (clientY - rect.top) / rect.height));
   // Snap to nearest player
   let bestDist = 999;
   players.forEach(p => {
@@ -2934,9 +2941,69 @@ function onArrowDragEnd(e) {
   }
   arrowDragId = null;
   arrowDragStart = null;
+  redrawArrows();
+}
+
+function onArrowDragMove(e) { _arrowDragMoveCore(e.clientX, e.clientY); }
+
+function onArrowDragEnd(e) {
+  _arrowDragEndCore(e.clientX, e.clientY);
   document.removeEventListener('mousemove', onArrowDragMove);
   document.removeEventListener('mouseup', onArrowDragEnd);
-  redrawArrows();
+}
+
+// ── Touch: long-press a player (without moving), then drag to draw ──
+function onPlayerTouchStart(e, pid, el) {
+  e.preventDefault();
+  const t = e.touches[0];
+  const startX = t.clientX, startY = t.clientY;
+  const pending = { timer: null, moved: false };
+
+  pending.timer = setTimeout(() => {
+    if(pending.moved) return;
+    cleanup();
+    el.classList.remove('longpress-pending');
+    if(navigator.vibrate) navigator.vibrate(15);
+    if(_beginArrowDrag(pid)) {
+      document.addEventListener('touchmove', onArrowDragMoveT, {passive:false});
+      document.addEventListener('touchend', onArrowDragEndT);
+    }
+  }, 450);
+  el.classList.add('longpress-pending');
+
+  function onMove(ev) {
+    ev.preventDefault();
+    const tt = ev.touches[0];
+    const dx = tt.clientX - startX, dy = tt.clientY - startY;
+    if(!pending.moved && Math.sqrt(dx*dx+dy*dy) > 10) {
+      pending.moved = true;
+      cleanup();
+      el.classList.remove('longpress-pending');
+      startDragTouch(e, pid); // hand off to the normal move-drag
+    }
+  }
+  function onEnd() { cleanup(); el.classList.remove('longpress-pending'); }
+  function cleanup() {
+    clearTimeout(pending.timer);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+  }
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('touchend', onEnd, {passive:false});
+}
+
+function onArrowDragMoveT(e) {
+  e.preventDefault();
+  const t = e.touches[0];
+  _arrowDragMoveCore(t.clientX, t.clientY);
+}
+
+function onArrowDragEndT(e) {
+  e.preventDefault(); // suppress the synthetic click that would otherwise reopen the player sheet
+  const t = e.changedTouches[0];
+  _arrowDragEndCore(t.clientX, t.clientY);
+  document.removeEventListener('touchmove', onArrowDragMoveT);
+  document.removeEventListener('touchend', onArrowDragEndT);
 }
 
 // ===================================================
@@ -3246,8 +3313,7 @@ function loadLineup(id) {
     if(btn){ btn.style.background=v===curView?'var(--acc)':'transparent'; btn.style.color=v===curView?'var(--gd)':'var(--gr)'; }
   });
   showView('lineup');
-  mobLineupActive = true;
-  if(isMobile()) mobShowAufstellung();
+  if(isMobile()) mobShowPitch();
   showToast('Geladen: '+lu.name);
 }
 
@@ -4013,15 +4079,6 @@ function showToast(msg){
 // ===================================================
 function isMobile(){ return window.innerWidth <= 700; }
 
-// True once the user is actively viewing a specific lineup on mobile (new or
-// loaded) — controls whether the "Aufstellung" tab shows the pitch or the
-// chooser (+ Neue Aufstellung / Gespeicherte Aufstellungen). Computed from
-// real data at startup (so restored in-progress work doesn't hide behind the
-// chooser after a reload) and updated explicitly at the few points where a
-// lineup starts or stops being "active" (finishNewLineupSetup, loadLineup,
-// mobBackToChooser).
-let mobLineupActive = false;
-
 function mobHideAllMainViews() {
   const pitchCenter = document.querySelector('.pitch-center');
   if(pitchCenter) pitchCenter.style.display = 'none';
@@ -4048,20 +4105,28 @@ function mobShowHome() {
   document.getElementById('mobViewHome')?.classList.remove('mob-hidden');
 }
 
-// Tapping "Aufstellung" on the start screen: resume the pitch if a lineup is
-// already in progress, otherwise the New/Gespeichert chooser.
+// Tapping "Aufstellung" on the start screen always lands on the New/
+// Gespeichert chooser — it never silently resumes whatever pitch state
+// happens to be in memory. Resuming a specific lineup is always an explicit
+// action (finishing the new-lineup wizard, loading a saved lineup) via
+// mobShowPitch() below.
 function mobShowAufstellung() {
   mobEnsureLineupViewActive();
   document.body.classList.remove('mob-home-active');
   mobHideAllMainViews();
-  if(mobLineupActive) {
-    const pitchCenter = document.querySelector('.pitch-center');
-    if(pitchCenter) pitchCenter.style.display = '';
-  } else {
-    document.getElementById('mobHomeLineupSub').textContent =
-      savedLineups.length ? savedLineups.length+' gespeicherte Aufstellungen' : 'Noch keine gespeicherten Aufstellungen';
-    document.getElementById('mobViewChooser')?.classList.remove('mob-hidden');
-  }
+  document.getElementById('mobHomeLineupSub').textContent =
+    savedLineups.length ? savedLineups.length+' gespeicherte Aufstellungen' : 'Noch keine gespeicherten Aufstellungen';
+  document.getElementById('mobViewChooser')?.classList.remove('mob-hidden');
+}
+
+// Explicit "show the pitch now" — used right after starting/loading a
+// specific lineup, never reached generically from the start screen.
+function mobShowPitch() {
+  mobEnsureLineupViewActive();
+  document.body.classList.remove('mob-home-active');
+  mobHideAllMainViews();
+  const pitchCenter = document.querySelector('.pitch-center');
+  if(pitchCenter) pitchCenter.style.display = '';
 }
 
 // Tapping "Kader" on the start screen
@@ -4092,7 +4157,6 @@ function mobKaderShowEditor() {
 // "← Start" on the pitch: step back one level to the Aufstellung chooser
 // (not all the way to the top-level start screen — that's the logo's job).
 function mobBackToChooser() {
-  mobLineupActive = false;
   mobShowAufstellung();
 }
 
@@ -4272,8 +4336,7 @@ function finishNewLineupSetup() {
   const btn = document.getElementById('mobKitColorBtn');
   if(btn) btn.style.background = selectedTeamColor;
   closeMobSheet();
-  mobLineupActive = true;
-  mobShowAufstellung();
+  mobShowPitch();
   renderPitch();
   saveNow();
   showToast('Aufstellung bereit');
