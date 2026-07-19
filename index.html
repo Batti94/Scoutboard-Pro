@@ -445,7 +445,7 @@ textarea{resize:vertical;min-height:70px;}
 
 <!-- HEADER -->
 <header>
-  <div class="logo">Scout<span>Board</span> <sub>PRO</sub></div>
+  <div class="logo" onclick="goHome()" style="cursor:pointer;">Scout<span>Board</span> <sub>PRO</sub></div>
   <div class="tab-bar">
     <div class="tab active" onclick="showView('lineup')">Aufstellung</div>
     <div class="tab" onclick="showView('saved')">Archiv</div>
@@ -516,15 +516,15 @@ textarea{resize:vertical;min-height:70px;}
         <div style="display:flex;background:rgba(0,0,0,.35);border-radius:20px;padding:3px;gap:2px;">
           <button id="btnStart" onclick="switchLineupView('start')"
             style="padding:4px 14px;border-radius:16px;border:none;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .18s;background:var(--acc);color:var(--gd);">
-            Anfang
+            Start
           </button>
           <button id="btnEnd" onclick="switchLineupView('end')"
             style="padding:4px 14px;border-radius:16px;border:none;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .18s;background:transparent;color:var(--gr);">
-            Ende
+            Live
           </button>
           <button id="btnCombined" onclick="switchLineupView('combined')"
             style="padding:4px 14px;border-radius:16px;border:none;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .18s;background:transparent;color:var(--gr);">
-            Gesamt
+            Final
           </button>
         </div>
         <button onclick="openExportModal()" title="Export als PNG"
@@ -742,6 +742,7 @@ textarea{resize:vertical;min-height:70px;}
     <label>★ Note (1–10)</label>
     <div class="rating-btn-row" id="epRatingRow"></div>
   </div>
+  <button class="btn sec" id="epUndoSubBtn" style="display:none;" onclick="undoLiveSubstitution(selId)">↺ Wechsel rückgängig</button>
   <button class="btn" onclick="applyEdit()">✓ OK</button>
   <button class="btn sec" onclick="applyAndNext()" title="Speichern & nächster Spieler">→ Weiter</button>
   <button class="btn sec" onclick="closeEdit()">Abbrechen</button>
@@ -758,15 +759,15 @@ textarea{resize:vertical;min-height:70px;}
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:.88rem;font-weight:500;">
         <input type="checkbox" id="expStart" checked style="width:18px;height:18px;accent-color:var(--acc);cursor:pointer;">
-        🟢 Anfangsaufstellung
+        🟢 Start
       </label>
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:.88rem;font-weight:500;">
         <input type="checkbox" id="expEnd" style="width:18px;height:18px;accent-color:var(--acc);cursor:pointer;">
-        🔴 Endaufstellung
+        🔴 Live
       </label>
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:.88rem;font-weight:500;">
         <input type="checkbox" id="expCombined" style="width:18px;height:18px;accent-color:var(--acc);cursor:pointer;">
-        🔵 Gesamtansicht
+        🔵 Final
       </label>
     </div>
     <div id="exportProgress" style="display:none;font-size:.78rem;color:var(--acc);margin-bottom:12px;text-align:center;">Wird exportiert…</div>
@@ -988,11 +989,11 @@ textarea{resize:vertical;min-height:70px;}
       <button class="btn" style="flex:1;min-height:48px;" onclick="applyMobPlayerEdit()">✓ Speichern</button>
     </div>
 
-    <!-- 5. Einwechseln -->
+    <!-- 5. Live-Wechsel rückgängig machen (nur wenn diese Position bereits ausgewechselt wurde) -->
     <div id="mobEpSubWrap" style="display:none;">
       <hr class="mob-ep-divider">
-      <label class="lbl" style="display:block;margin-bottom:8px;">↕ Einwechseln</label>
-      <div id="mobEpSubList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <label class="lbl" style="display:block;margin-bottom:8px;">Wechsel</label>
+      <div id="mobEpSubList"></div>
     </div>
   </div>
 </div>
@@ -1011,18 +1012,6 @@ textarea{resize:vertical;min-height:70px;}
     </div>
     <div id="mobKitColorPicker" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;"></div>
     <button class="btn" style="width:100%;min-height:48px;" onclick="applyTeamKitColor()">✓ Auf alle anwenden</button>
-  </div>
-</div>
-
-<!-- SHEET: SUB SWAP – Feldspiele auswählen -->
-<div class="mob-sheet" id="sheetSubSwap">
-  <div class="mob-sheet-handle"></div>
-  <div class="mob-sheet-header">
-    <span class="mob-sheet-title" id="sheetSubSwapTitle">Einwechseln für…</span>
-    <button class="mob-sheet-close" onclick="closeMobSheet()">✕</button>
-  </div>
-  <div class="mob-sheet-body" style="padding:0 0 16px;">
-    <div id="subSwapList"></div>
   </div>
 </div>
 
@@ -1118,12 +1107,12 @@ let nextLid = 1;
 let curLineupId = null; // id of currently loaded lineup
 let nextSrid = 1;
 
-// Start / End / Combined lineup toggle
+// Start / Live / Final lineup toggle. 'combined' (Final) has no snapshot of
+// its own — it's always freshly derived from start+end, see computeFinalPlayers().
 let curView = 'start'; // 'start' | 'end' | 'combined'
 let snapshots = {
   start: null,    // {formation, players, subs, arrows}
   end:   null,
-  combined: null, // own editable snapshot for Gesamt view
 };
 
 // Arrow state
@@ -1135,7 +1124,6 @@ let curArrowColor = ARROW_COLORS[0];
 let subs = []; // {id,num,name,color,goals,assists,yellow,red,subForId}
 let selSubId = null;
 let nextSubId = 100;
-let dragSubId = null; // sub being dragged onto field
 let dragRosterId = null; // roster entry being dragged onto field
 
 // History / Undo
@@ -1426,33 +1414,32 @@ function applySnapshot(snap) {
   arrows = JSON.parse(JSON.stringify(snap.arrows));
 }
 
+// Final is always freshly derived from Start + Live's recorded substitutions
+// — never an independently editable snapshot. Base layout/positions come
+// from Start; any position Live recorded a substitution for (subIn+subOut)
+// shows the incoming player instead (see performLiveSubstitution()).
+function computeFinalPlayers() {
+  const startPlayers = snapshots.start ? snapshots.start.players : players;
+  const endPlayers = snapshots.end ? snapshots.end.players : null;
+  return startPlayers.map(sp => {
+    const ep = endPlayers ? endPlayers.find(x => x.id === sp.id) : null;
+    const source = (ep && ep.subIn && ep.subOut) ? ep : sp;
+    return JSON.parse(JSON.stringify(source));
+  });
+}
+
 function switchLineupView(view) {
-  // Save current non-combined state before leaving
+  // Save current non-combined state before leaving (Final is never saved — it's derived)
   if(curView !== 'combined') snapshots[curView] = getSnapshot();
-  // Save combined state if leaving combined
-  if(curView === 'combined' && snapshots.combined) {
-    snapshots.combined = {
-      formation: curFormation,
-      players: JSON.parse(JSON.stringify(getActivePlayers())),
-      subs: snapshots.combined.subs,
-      arrows: [],
-    };
-  }
 
   curView = view;
 
   if(view === 'combined') {
-    // Initialize combined snapshot as deep copy of start players + end subs
-    if(!snapshots.combined) {
-      const startPlayers = snapshots.start ? JSON.parse(JSON.stringify(snapshots.start.players)) : JSON.parse(JSON.stringify(players));
-      const endSubs = snapshots.end ? JSON.parse(JSON.stringify(snapshots.end.subs)) : JSON.parse(JSON.stringify(subs));
-      snapshots.combined = {
-        formation: snapshots.start ? snapshots.start.formation : curFormation,
-        players: startPlayers,
-        subs: endSubs,
-        arrows: [],
-      };
-    }
+    curFormation = snapshots.start ? snapshots.start.formation : curFormation;
+    players = computeFinalPlayers();
+    subs = snapshots.start ? JSON.parse(JSON.stringify(snapshots.start.subs)) : subs;
+    arrows = [];
+    closeEdit();
     renderAll();
   } else {
     // Load snapshot or initialize
@@ -1478,12 +1465,8 @@ function switchLineupView(view) {
     }
   });
 
-  const labels = {start:'Anfangsaufstellung', end:'Endaufstellung', combined:'Gesamtansicht'};
+  const labels = {start:'Start', end:'Live', combined:'Final'};
   showToast(labels[view]);
-}
-
-function renderCombined(startSnap, endSnap) {
-  // Not used directly — combined rendering happens in renderPitch via curView
 }
 function showView(v) {
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
@@ -1539,7 +1522,7 @@ function applyFormation(key, keepData) {
     for(let j=0;j<count;j++){
       const x = count===1 ? 0.5 : mg + (j/(count-1))*(1-2*mg);
       const old = keepData && players.find(p=>p.id===pid);
-      newPlayers.push({
+      const newP = {
         id: pid, x, y,
         num: old?old.num:String(pid),
         name: old?old.name:'',
@@ -1549,7 +1532,9 @@ function applyFormation(key, keepData) {
         assists: old?old.assists:0,
         yellow: old?old.yellow:0,
         red: old?old.red:0,
-      });
+      };
+      if(old && old.subIn) { newP.subIn = true; newP.subOut = old.subOut; }
+      newPlayers.push(newP);
       pid++;
     }
   });
@@ -1653,7 +1638,7 @@ function autoLineup() {
     }));
 
     // Reset snapshots — auto lineup starts fresh
-    snapshots = { start: null, end: null, combined: null };
+    snapshots = { start: null, end: null };
     curView = 'start';
     ['start','end','combined'].forEach(v => {
       const btn = document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
@@ -1709,42 +1694,28 @@ function renderPitch() {
   const W = pitch.offsetWidth;
   const H = pitch.offsetHeight;
 
-  // Determine which players/subs to render based on view
-  const startSnap = snapshots.start;
-  const endSnap = snapshots.end;
-
-  let renderPlayers, renderSubs_, renderArrows_;
+  let renderPlayers, renderArrows_;
+  const readOnly = curView === 'combined';
 
   if(curView === 'combined') {
-    // Combined: use own combined snapshot (separate from start)
-    const combinedSnap = snapshots.combined;
-    renderPlayers = combinedSnap ? combinedSnap.players : (snapshots.start ? JSON.parse(JSON.stringify(snapshots.start.players)) : players);
-    renderSubs_ = combinedSnap ? combinedSnap.subs : (snapshots.end ? snapshots.end.subs : subs);
-    renderArrows_ = []; // no arrows in combined
-  } else if(curView === 'end') {
-    // End view: hide subbed-out players entirely, show subs on their end positions
-    renderPlayers = players.filter(p => !subs.find(s=>s.subForId===p.id && s.onField));
-    renderSubs_ = subs;
-    renderArrows_ = arrows;
+    // Final: always freshly derived from Start + Live's substitutions — never
+    // an independently editable snapshot (see computeFinalPlayers()).
+    renderPlayers = computeFinalPlayers();
+    renderArrows_ = []; // no arrows in Final
   } else {
-    // Start view: show all 11 starters, no sub-on-field
+    // Start and Live both just show the live players array — a Live
+    // substitution overwrites a position's identity in place (subIn/subOut),
+    // it's not a separate floating marker.
     renderPlayers = players;
-    renderSubs_ = curView === 'start' ? [] : subs; // hide subs in start view
     renderArrows_ = arrows;
   }
 
   renderPlayers.forEach(p => {
-    // In combined: subbed-out players are transparent with ↓
-    const subbedOut = curView === 'combined'
-      ? renderSubs_.find(s=>s.subForId===p.id && s.onField)
-      : (curView === 'start' ? null : subs.find(s=>s.subForId===p.id));
-
     const el = document.createElement('div');
-    el.className = 'player' + (p.id===selId?' sel':'') + (subbedOut?' subbed-out':'');
+    el.className = 'player' + (p.id===selId?' sel':'');
     el.dataset.id = p.id;
     el.style.left = (p.x*W)+'px';
     el.style.top = (p.y*H)+'px';
-    if(subbedOut) el.style.opacity = '0.35';
 
     const dot = document.createElement('div');
     dot.className = 'pdot';
@@ -1752,12 +1723,12 @@ function renderPitch() {
     dot.style.color = isLight(p.color)?'#0a1a0f':'#fff';
     dot.textContent = p.num||'';
 
-    // Red down-arrow badge for subbed-out players
-    if(subbedOut) {
-      const subBadge = document.createElement('div');
-      subBadge.style.cssText='position:absolute;top:-8px;left:-8px;width:16px;height:16px;background:#e05252;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:white;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.5);';
-      subBadge.textContent = '↓';
-      dot.appendChild(subBadge);
+    // Minute badge for a substituted-in player (Live + Final)
+    if(p.subIn && p.subOut) {
+      const minBadge = document.createElement('div');
+      minBadge.style.cssText='position:absolute;top:-8px;right:-8px;min-width:16px;height:16px;padding:0 3px;background:#27ae60;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:white;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.5);';
+      minBadge.textContent = (p.subOut.minute ? p.subOut.minute+"'" : '↑');
+      dot.appendChild(minBadge);
     }
 
     // badges — proper football SVG icons
@@ -1831,88 +1802,48 @@ function renderPitch() {
     el.appendChild(dot);
     el.appendChild(name);
 
-    // Left click = drag/move/swap
-    el.addEventListener('mousedown', e => {
-      if(e.button === 0) startDrag(e, p.id);
-    });
-    // Right click = draw arrow from this player
-    el.addEventListener('mousedown', e => {
-      if(e.button === 2) startArrowDrag(e, p.id);
-    });
-    el.addEventListener('contextmenu', e => e.preventDefault());
+    // Final: small greyed reference to who this player replaced
+    if(readOnly && p.subIn && p.subOut) {
+      const outLabel = document.createElement('div');
+      outLabel.style.cssText='margin-top:2px;font-size:.58rem;color:var(--gr);white-space:nowrap;';
+      outLabel.textContent = 'für ' + (p.subOut.name||'?') + (p.subOut.minute ? ' · '+p.subOut.minute+"'" : '');
+      el.appendChild(outLabel);
+    }
 
-    // Touch: long-press = arrow, short tap or drag = move
-    el.addEventListener('touchstart', e => { startDragTouch(e,p.id); }, {passive:false});
-    el.addEventListener('click', e => { e.stopPropagation(); selectPlayer(p.id); });
+    if(!readOnly) {
+      // Left click = drag/move/swap
+      el.addEventListener('mousedown', e => {
+        if(e.button === 0) startDrag(e, p.id);
+      });
+      // Right click = draw arrow from this player
+      el.addEventListener('mousedown', e => {
+        if(e.button === 2) startArrowDrag(e, p.id);
+      });
+      el.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Drop target for sub dragging AND roster dragging
-    el.addEventListener('dragover', e => {
-      e.preventDefault();
-      el.style.outline='3px solid #27ae60';
-      el.style.outlineOffset='3px';
-    });
-    el.addEventListener('dragleave', e => {
-      el.style.outline=''; el.style.outlineOffset='';
-    });
-    el.addEventListener('drop', e => {
-      e.preventDefault();
-      el.style.outline=''; el.style.outlineOffset='';
-      if(dragSubId!==null) { applySubstitution(dragSubId, p.id); return; }
-      if(dragRosterId!==null) {
-        const r = roster.find(x=>x.id===dragRosterId);
-        if(r) assignRosterToPlayer(r, p.id);
-        dragRosterId=null;
-      }
-    });
+      // Touch: long-press = arrow, short tap or drag = move
+      el.addEventListener('touchstart', e => { startDragTouch(e,p.id); }, {passive:false});
+      el.addEventListener('click', e => { e.stopPropagation(); selectPlayer(p.id); });
 
-    pitch.appendChild(el);
-  });
-
-  // Render subs that are ON the field
-  renderSubs_.filter(s=>s.onField && s.subForId!=null).forEach(s => {
-    const subbedPlayer = renderPlayers.find(p=>p.id===s.subForId)
-                      || players.find(p=>p.id===s.subForId);
-
-    const el = document.createElement('div');
-    el.className = 'player sub-on-field' + (s.id===selSubId?' sel':'');
-    el.dataset.sid = s.id;
-    el.style.left = (s.fieldX*W)+'px';
-    el.style.top = (s.fieldY*H)+'px';
-
-    const dot = document.createElement('div');
-    dot.className = 'pdot';
-    dot.style.background = s.color;
-    dot.style.color = isLight(s.color)?'#0a1a0f':'#fff';
-    dot.textContent = s.num||'?';
-
-    // Green up-arrow badge
-    const inBadge = document.createElement('div');
-    inBadge.style.cssText='position:absolute;top:-8px;left:-8px;width:16px;height:16px;background:#27ae60;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:white;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.5);';
-    inBadge.textContent = '↑';
-    dot.appendChild(inBadge);
-
-    const nameIn = document.createElement('div');
-    nameIn.className = 'pname';
-    nameIn.style.cssText='margin-top:3px;background:rgba(0,80,0,.55);color:#6eff9a;border-radius:3px;max-width:90px;overflow:visible;white-space:nowrap;';
-    nameIn.textContent = s.name||'?';
-    if((s.name||'').length > 10) nameIn.style.fontSize='clamp(.44rem,.9vw,.65rem)';
-    if((s.name||'').length > 14) nameIn.style.fontSize='clamp(.38rem,.75vw,.55rem)';
-
-    const nameOut = document.createElement('div');
-    nameOut.className = 'pname';
-    nameOut.style.cssText='margin-top:1px;background:rgba(80,0,0,.55);color:#ff8080;border-radius:3px;max-width:90px;overflow:visible;white-space:nowrap;text-decoration:line-through;';
-    nameOut.textContent = subbedPlayer?.name || '?';
-    if((subbedPlayer?.name||'').length > 10) nameOut.style.fontSize='clamp(.44rem,.9vw,.65rem)';
-    if((subbedPlayer?.name||'').length > 14) nameOut.style.fontSize='clamp(.38rem,.75vw,.55rem)';
-
-    el.appendChild(dot);
-    el.appendChild(nameIn);
-    el.appendChild(nameOut);
-
-    // Drag to reposition
-    el.addEventListener('mousedown', e => { startSubFieldDrag(e, s.id); });
-    el.addEventListener('touchstart', e => { startSubFieldDragTouch(e, s.id); }, {passive:false});
-    el.addEventListener('click', e => { e.stopPropagation(); selectSubOnField(s.id); });
+      // Drop target for roster dragging (Start: assign a starter; Live: record a substitution)
+      el.addEventListener('dragover', e => {
+        e.preventDefault();
+        el.style.outline='3px solid #27ae60';
+        el.style.outlineOffset='3px';
+      });
+      el.addEventListener('dragleave', e => {
+        el.style.outline=''; el.style.outlineOffset='';
+      });
+      el.addEventListener('drop', e => {
+        e.preventDefault();
+        el.style.outline=''; el.style.outlineOffset='';
+        if(dragRosterId!==null) {
+          const r = roster.find(x=>x.id===dragRosterId);
+          if(r) assignRosterToPlayer(r, p.id);
+          dragRosterId=null;
+        }
+      });
+    }
 
     pitch.appendChild(el);
   });
@@ -1923,10 +1854,9 @@ function renderPitch() {
   cv.height = H;
   // Draw correct arrows for current view
   if(curView === 'combined') {
-    // No arrows in Gesamt view
+    // No arrows in Final view
     const ctx = cv.getContext('2d');
     ctx.clearRect(0,0,W,H);
-    drawSubLines();
   } else {
     redrawArrows();
   }
@@ -2054,28 +1984,8 @@ function addSubSlot() {
   renderSubs();
 }
 
-function applySubstitution(subId, playerId) {
-  saveHistory();
-  const s = subs.find(x=>x.id===subId);
-  if(!s) return;
-  const p = players.find(x=>x.id===playerId);
-  // Remove any previous substitution for this player
-  subs.forEach(x=>{ if(x.subForId===playerId) { x.subForId=null; x.onField=false; x.fieldX=null; x.fieldY=null; } });
-  // Toggle: if already linked, unlink
-  if(s.subForId===playerId) {
-    s.subForId=null; s.onField=false; s.fieldX=null; s.fieldY=null;
-    showToast('Auswechslung aufgehoben');
-  } else {
-    s.subForId=playerId;
-    s.onField=true;
-    // Place sub slightly offset from the subbed player
-    s.fieldX = Math.max(0.03, Math.min(0.97, (p?.x||0.5) + 0.06));
-    s.fieldY = Math.max(0.03, Math.min(0.97, (p?.y||0.5)));
-    showToast(`${s.name||'Einwechsler'} ↑ für ${p?.name||'Spieler'}`);
-  }
-  renderPitch();
-  renderSubs();
-}
+// Substitutions are recorded in the Live view by tapping/clicking a field
+// player and picking a replacement from the Kader — see performLiveSubstitution().
 
 function renderSubs() {
   const bench = document.getElementById('subBench');
@@ -2130,12 +2040,6 @@ function renderSubs() {
       dot.appendChild(rb);
     }
 
-    // sub-in arrow icon
-    const icon = document.createElement('div');
-    icon.className = 'sub-icon';
-    icon.textContent = '↑';
-    dot.appendChild(icon);
-
     const name = document.createElement('div');
     name.className = 'spname';
     name.textContent = s.name||'–';
@@ -2143,43 +2047,6 @@ function renderSubs() {
     el.appendChild(dot);
     el.appendChild(name);
     el.addEventListener('click', e => { e.stopPropagation(); selectSub(s.id); });
-
-    // Drag to substitute (desktop)
-    el.setAttribute('draggable', 'true');
-    el.addEventListener('dragstart', e => {
-      dragSubId = s.id;
-      e.dataTransfer.effectAllowed = 'move';
-      el.style.opacity = '0.5';
-    });
-    el.addEventListener('dragend', e => {
-      dragSubId = null;
-      el.style.opacity = '';
-    });
-
-    // Touch drag to substitute (mobile)
-    el.addEventListener('touchstart', e => {
-      dragSubId = s.id;
-      el.style.opacity = '0.5';
-    }, {passive:true});
-    el.addEventListener('touchend', e => {
-      if(dragSubId === null) return;
-      const touch = e.changedTouches[0];
-      const pitch = document.getElementById('pitch');
-      const rect = pitch.getBoundingClientRect();
-      const tx = touch.clientX - rect.left;
-      const ty = touch.clientY - rect.top;
-      const W = pitch.offsetWidth, H = pitch.offsetHeight;
-      // find nearest player to touch point
-      let best = null, bestDist = 50; // max 50px snap distance
-      players.forEach(p => {
-        const dx = p.x*W - tx, dy = p.y*H - ty;
-        const dist = Math.sqrt(dx*dx+dy*dy);
-        if(dist < bestDist) { bestDist=dist; best=p; }
-      });
-      if(best) applySubstitution(dragSubId, best.id);
-      dragSubId = null;
-      el.style.opacity = '';
-    });
 
     bench.appendChild(el);
   });
@@ -2242,9 +2109,13 @@ function removeSubOrPlayer() {
 }
 
 function assignRosterToPlayer(r, playerId) {
-  saveHistory();
   const p = players.find(x=>x.id===playerId);
   if(!p) return;
+  if(curView === 'end' && p.name && p.name.toLowerCase() !== r.name.toLowerCase()) {
+    performLiveSubstitution({num:r.num, name:r.name}, playerId);
+    return;
+  }
+  saveHistory();
   p.name = r.name;
   p.num = r.num;
   renderPitch();
@@ -2433,7 +2304,15 @@ function assignRoster(r) {
   if(panel.dataset.mode==='sub' && selSubId) { assignRosterToSub(r); return; }
   if(selId) {
     const p = players.find(x=>x.id===selId);
-    if(p){ p.name=r.name; p.num=r.num; document.getElementById('epName').value=r.name; document.getElementById('epNum').value=r.num; renderPitch(); renderRoster(); showToast(r.name+' zugewiesen'); return; }
+    if(p){
+      // In Live view, assigning a different player to an occupied position
+      // is a substitution (asks for the minute), not a plain rename.
+      if(curView === 'end' && p.name && p.name.toLowerCase() !== r.name.toLowerCase()) {
+        performLiveSubstitution({num:r.num, name:r.name}, p.id);
+        return;
+      }
+      p.name=r.name; p.num=r.num; document.getElementById('epName').value=r.name; document.getElementById('epNum').value=r.num; renderPitch(); renderRoster(); showToast(r.name+' zugewiesen'); return;
+    }
   }
   const empty = players.find(p=>!p.name);
   if(empty){ empty.name=r.name; empty.num=r.num; renderPitch(); renderRoster(); showToast(r.name+' zugewiesen'); }
@@ -2548,6 +2427,8 @@ function selectPlayer(id) {
   document.getElementById('epRed').textContent = p.red||0;
   document.querySelectorAll('#epColors .cpick').forEach(d=>d.classList.toggle('sel', d.dataset.c===p.color));
   buildRatingBtns('epRatingRow', p.rating||0);
+  const undoBtn = document.getElementById('epUndoSubBtn');
+  if(undoBtn) undoBtn.style.display = (curView === 'end' && p.subIn && p.subOut) ? '' : 'none';
   document.getElementById('editPanel').classList.add('open');
   renderPitch();
 }
@@ -2661,7 +2542,12 @@ function openMobPlayerEdit(p) {
         ${isCurrent ? '<span class="mob-rpc-badge current">Aktuell</span>' : ''}`;
 
       card.onclick = () => {
-        // Instant assign: fill inputs then save
+        // In Live view, assigning a different player to an occupied position
+        // is a substitution (asks for the minute); otherwise it's a plain assign.
+        if(curView === 'end' && p.name && !isCurrent) {
+          performLiveSubstitution({num:r.num, name:r.name}, p.id);
+          return;
+        }
         document.getElementById('mobEpNum').value  = r.num;
         document.getElementById('mobEpName').value = r.name;
         applyMobPlayerEdit();
@@ -2674,48 +2560,21 @@ function openMobPlayerEdit(p) {
   const search = document.getElementById('mobEpSearch');
   if(search) search.value = '';
 
-  // Einwechseln section
+  // Live substitution undo — only relevant in Live view, for a position that
+  // already has a recorded substitution.
   const subWrap = document.getElementById('mobEpSubWrap');
   const subList = document.getElementById('mobEpSubList');
-  const namedSubs = subs.filter(s => s.name);
-  if(!namedSubs.length || !p.name) {
-    subWrap.style.display = 'none';
-  } else {
+  if(curView === 'end' && p.subIn && p.subOut) {
     subWrap.style.display = '';
     subList.innerHTML = '';
-    namedSubs.forEach(s => {
-      const isActive = s.subForId === p.id;
-      const card = document.createElement('div');
-      card.style.cssText = `display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;cursor:pointer;border:1px solid ${isActive ? '#27ae60' : 'var(--pb)'};background:${isActive ? 'rgba(39,174,96,.1)' : 'rgba(255,255,255,.04)'};transition:all .15s;`;
-      card.innerHTML = `
-        <div style="width:38px;height:38px;border-radius:50%;background:${s.color||'var(--wh)'};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gd);flex-shrink:0;border:2px solid rgba(255,255,255,.5);">${s.num||'?'}</div>
-        <div style="flex:1;">
-          <div style="font-size:.88rem;font-weight:600;">${s.name}</div>
-          <div style="font-size:.68rem;color:var(--gr);">${s.pos||'–'}</div>
-        </div>
-        ${isActive
-          ? '<span style="font-size:.72rem;color:#27ae60;font-weight:700;padding:3px 8px;background:rgba(39,174,96,.15);border-radius:6px;">Aktiv ✓</span>'
-          : '<span style="font-size:.72rem;color:var(--gr);">Einwechseln →</span>'}
-      `;
-      card.onclick = () => {
-        if(isActive) {
-          // undo
-          s.subForId = null;
-          undoSubstitutionInEnd(s, p.id);
-          closeMobSheet();
-          saveStorage();
-          showToast('Einwechslung rückgängig');
-        } else {
-          // first save any name/stat edits, then sub
-          applyMobPlayerEdit();
-          s.subForId = p.id;
-          applySubstitutionToEnd(s, p.id);
-          saveStorage();
-          showToast(`↑ ${s.name}  ↓ ${p.name}`);
-        }
-      };
-      subList.appendChild(card);
-    });
+    const btn = document.createElement('button');
+    btn.className = 'btn sec';
+    btn.style.cssText = 'width:100%;min-height:48px;';
+    btn.textContent = `↺ Wechsel rückgängig (${p.subOut.name}${p.subOut.minute ? ' · '+p.subOut.minute+"'" : ''})`;
+    btn.onclick = () => { undoLiveSubstitution(p.id); };
+    subList.appendChild(btn);
+  } else {
+    subWrap.style.display = 'none';
   }
 
   openMobSheet('sheetPlayerEdit');
@@ -2747,11 +2606,21 @@ function applyMobPlayerEdit() {
   p.rating  = getSelectedRating('mobEpRatingRow');
   const sel = document.querySelector('#mobEpColors .cpick.sel');
   if(sel) p.color = sel.dataset.c;
-  // sync to all snapshots
-  ['start','end'].forEach(v => {
-    const sp = snapshots[v]?.players?.find(x=>x.id===selId);
-    if(sp) { sp.num=p.num; sp.name=p.name; sp.color=p.color; sp.goals=p.goals; sp.assists=p.assists; sp.yellow=p.yellow; sp.red=p.red; sp.rating=p.rating; }
-  });
+
+  // Keep the current view's own snapshot mirror in sync (same slot, always safe)
+  const sameSnap = snapshots[curView]?.players?.find(x=>x.id===selId);
+  if(sameSnap) { sameSnap.num=p.num; sameSnap.name=p.name; sameSnap.color=p.color; sameSnap.goals=p.goals; sameSnap.assists=p.assists; sameSnap.yellow=p.yellow; sameSnap.red=p.red; sameSnap.rating=p.rating; }
+
+  // Sync into the other view too — but once a slot has diverged via a Live
+  // substitution (either side has subIn), Start and Live show different
+  // people on purpose, so only stats sync there, never the identity.
+  const otherP = snapshots[curView === 'start' ? 'end' : 'start']?.players?.find(x=>x.id===selId);
+  if(otherP) {
+    otherP.goals=p.goals; otherP.assists=p.assists; otherP.yellow=p.yellow; otherP.red=p.red; otherP.rating=p.rating;
+    if(!p.subIn && !otherP.subIn) {
+      otherP.num=p.num; otherP.name=p.name; otherP.color=p.color;
+    }
+  }
   closeMobSheet();
   closeEdit();
   renderPitch();
@@ -2814,16 +2683,24 @@ function applyEdit() {
   const rating = getSelectedRating('epRatingRow');
   const selColor = document.querySelector('#epColors .cpick.sel');
   const color = selColor ? selColor.dataset.c : null;
-  // Apply to current players + all snapshots
-  const applyToArr = (arr) => {
-    const p = arr?.find(x=>x.id===selId);
-    if(!p) return;
-    p.num=num; p.name=name; p.goals=goals; p.assists=assists; p.yellow=yellow; p.red=red; p.rating=rating;
-    if(color) p.color=color;
-  };
-  applyToArr(players);
-  applyToArr(snapshots.start?.players);
-  applyToArr(snapshots.end?.players);
+
+  const p = players.find(x=>x.id===selId);
+  if(!p) return;
+  p.num=num; p.name=name; p.goals=goals; p.assists=assists; p.yellow=yellow; p.red=red; p.rating=rating;
+  if(color) p.color=color;
+
+  // Sync into the other view's snapshot too — but once a slot has diverged via
+  // a Live substitution (either side has subIn), Start and Live are meant to
+  // show different people, so only stats sync there, never the identity.
+  const otherArr = snapshots[curView === 'start' ? 'end' : 'start']?.players;
+  const otherP = otherArr?.find(x=>x.id===selId);
+  if(otherP) {
+    otherP.goals=goals; otherP.assists=assists; otherP.yellow=yellow; otherP.red=red; otherP.rating=rating;
+    if(!p.subIn && !otherP.subIn) {
+      otherP.num=num; otherP.name=name;
+      if(color) otherP.color=color;
+    }
+  }
   closeEdit();
   renderRoster();
   showToast('Gespeichert');
@@ -2856,8 +2733,7 @@ let selArrowIdx = null;
 let dragOverBench = false;
 
 function getActivePlayers() {
-  if(curView === 'combined' && snapshots.combined) return snapshots.combined.players;
-  if(curView === 'combined' && snapshots.start) return snapshots.start.players; // fallback
+  if(curView === 'combined') return computeFinalPlayers();
   return players;
 }
 
@@ -3057,7 +2933,6 @@ function onArrowDragMove(e) {
   arrows.forEach((a,i) => {
     drawArrow(ctx, a.x1*W, a.y1*H, a.x2*W, a.y2*H, i===selArrowIdx?'#e8c84a':a.color, i===selArrowIdx);
   });
-  drawSubLines();
   // Preview arrow
   drawArrow(ctx, arrowDragStart.x*W, arrowDragStart.y*H, ex*W, ey*H, curArrowColor, false);
 }
@@ -3201,7 +3076,7 @@ function resetLineupForNewRoster() {
   players.forEach(p => { p.name=''; p.goals=0; p.assists=0; p.yellow=0; p.red=0; });
   subs = [];
   arrows = [];
-  snapshots = { start: null, end: null, combined: null };
+  snapshots = { start: null, end: null };
   curView = 'start';
   curLineupId = null;
   ['start','end','combined'].forEach(v => {
@@ -3241,7 +3116,7 @@ function resetLineup() {
     });
     subs = [];
     arrows = [];
-    snapshots = { start: null, end: null, combined: null };
+    snapshots = { start: null, end: null };
     curView = 'start';
     curLineupId = null;
     // Reset toggle buttons
@@ -3256,106 +3131,6 @@ function resetLineup() {
   });
 }
 
-function drawSubLines() {
-  if(curView !== 'combined') return;
-  const cv = document.getElementById('arrowCanvas');
-  const ctx = cv.getContext('2d');
-  const W = cv.width, H = cv.height;
-  const combinedSnap = snapshots.combined;
-  const subsToLine = combinedSnap ? combinedSnap.subs : (snapshots.end ? snapshots.end.subs : subs);
-  const playersRef = combinedSnap ? combinedSnap.players : (snapshots.start ? snapshots.start.players : players);
-  subsToLine.filter(s=>s.onField && s.subForId!=null).forEach(s => {
-    const p = playersRef.find(x=>x.id===s.subForId);
-    if(!p || s.fieldX==null) return;
-    const x1 = s.fieldX * W, y1 = s.fieldY * H;
-    const x2 = p.x * W, y2 = p.y * H;
-    ctx.save();
-    ctx.strokeStyle = '#27ae60';
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.5;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-    ctx.restore();
-  });
-}
-
-// Drag sub-on-field player to reposition
-let dragSubFieldId = null;
-let dragSubFieldOff = {x:0, y:0};
-
-function startSubFieldDrag(e, sid) {
-  e.preventDefault();
-  saveHistory();
-  dragSubFieldId = sid;
-  const pitch = document.getElementById('pitch');
-  const rect = pitch.getBoundingClientRect();
-  const s = subs.find(x=>x.id===sid);
-  dragSubFieldOff = {x: e.clientX - rect.left - s.fieldX*rect.width, y: e.clientY - rect.top - s.fieldY*rect.height};
-  document.addEventListener('mousemove', onSubFieldDragMove);
-  document.addEventListener('mouseup', onSubFieldDragEnd);
-}
-
-function startSubFieldDragTouch(e, sid) {
-  e.preventDefault();
-  saveHistory();
-  dragSubFieldId = sid;
-  const pitch = document.getElementById('pitch');
-  const rect = pitch.getBoundingClientRect();
-  const s = subs.find(x=>x.id===sid);
-  const t = e.touches[0];
-  dragSubFieldOff = {x: t.clientX - rect.left - s.fieldX*rect.width, y: t.clientY - rect.top - s.fieldY*rect.height};
-  document.addEventListener('touchmove', onSubFieldDragMoveT, {passive:false});
-  document.addEventListener('touchend', onSubFieldDragEndT);
-}
-
-function onSubFieldDragMove(e) { if(dragSubFieldId) moveSubField(e.clientX, e.clientY); }
-function onSubFieldDragMoveT(e) { e.preventDefault(); if(dragSubFieldId) moveSubField(e.touches[0].clientX, e.touches[0].clientY); }
-
-function getActiveSubs() {
-  if(curView === 'combined' && snapshots.combined) return snapshots.combined.subs;
-  return subs;
-}
-
-function moveSubField(cx, cy) {
-  const pitch = document.getElementById('pitch');
-  const rect = pitch.getBoundingClientRect();
-  const nx = Math.max(0.03, Math.min(0.97, (cx - rect.left - dragSubFieldOff.x)/rect.width));
-  const ny = Math.max(0.03, Math.min(0.97, (cy - rect.top - dragSubFieldOff.y)/rect.height));
-  const s = getActiveSubs().find(x=>x.id===dragSubFieldId);
-  if(s) { s.fieldX=nx; s.fieldY=ny; }
-  const el = document.querySelector(`.player[data-sid="${dragSubFieldId}"]`);
-  if(el) {
-    el.style.left=(nx*rect.width)+'px';
-    el.style.top=(ny*rect.height)+'px';
-  }
-  redrawArrows(); drawSubLines();
-}
-
-function onSubFieldDragEnd() { dragSubFieldId=null; document.removeEventListener('mousemove',onSubFieldDragMove); document.removeEventListener('mouseup',onSubFieldDragEnd); renderPitch(); }
-function onSubFieldDragEndT() { dragSubFieldId=null; document.removeEventListener('touchmove',onSubFieldDragMoveT); document.removeEventListener('touchend',onSubFieldDragEndT); renderPitch(); }
-
-function selectSubOnField(sid) {
-  selSubId = sid;
-  selId = null;
-  const s = getActiveSubs().find(x=>x.id===sid);
-  if(!s) return;
-  document.getElementById('epTitle').textContent = '↑ Einwechsler';
-  document.getElementById('epNum').value = s.num||'';
-  document.getElementById('epName').value = s.name||'';
-  document.getElementById('epGoals').textContent = s.goals||0;
-  document.getElementById('epAssists').textContent = s.assists||0;
-  document.getElementById('epYellow').textContent = s.yellow||0;
-  document.getElementById('epRed').textContent = s.red||0;
-  document.querySelectorAll('#epColors .cpick').forEach(d=>d.classList.toggle('sel', d.dataset.c===s.color));
-  buildRatingBtns('epRatingRow', s.rating||0);
-  document.getElementById('editPanel').classList.add('open');
-  document.getElementById('editPanel').dataset.mode = 'sub';
-  renderSubs();
-}
-
 function redrawArrows() {
   const cv=document.getElementById('arrowCanvas');
   const ctx=cv.getContext('2d');
@@ -3366,7 +3141,6 @@ function redrawArrows() {
     const selected = (i === selArrowIdx);
     drawArrow(ctx,x1,y1,x2,y2, selected?'#e8c84a':a.color, selected);
   });
-  drawSubLines();
 }
 
 function drawArrow(ctx,x1,y1,x2,y2,color,selected=false) {
@@ -3948,9 +3722,9 @@ async function runExport() {
   document.querySelector('#exportModal .btn:last-child').disabled = true;
 
   const views = [];
-  if(doStart) views.push({key:'start', label:'Anfang'});
-  if(doEnd) views.push({key:'end', label:'Ende'});
-  if(doCombined) views.push({key:'combined', label:'Gesamt'});
+  if(doStart) views.push({key:'start', label:'Start'});
+  if(doEnd) views.push({key:'end', label:'Live'});
+  if(doCombined) views.push({key:'combined', label:'Final'});
 
   const savedView = curView;
 
@@ -4163,6 +3937,10 @@ async function switchLineupViewSilent(view) {
     if(curView !== 'combined') snapshots[curView] = getSnapshot();
     curView = view;
     if(view === 'combined') {
+      curFormation = snapshots.start ? snapshots.start.formation : curFormation;
+      players = computeFinalPlayers();
+      subs = snapshots.start ? JSON.parse(JSON.stringify(snapshots.start.subs)) : subs;
+      arrows = [];
       renderAll();
     } else {
       if(snapshots[view]) applySnapshot(snapshots[view]);
@@ -4327,6 +4105,13 @@ function mobBackToChooser() {
   mobNav('lineup');
 }
 
+// Header logo click — always a safe way back to a known starting point.
+function goHome() {
+  closeEdit();
+  if (isMobile()) mobBackToChooser();
+  else showView('lineup');
+}
+
 function openMobSheet(id) {
   closeMobSheet(false);
   document.getElementById(id).classList.add('open');
@@ -4396,108 +4181,17 @@ function renderMobBench() {
   grid.innerHTML = '';
   if(!subs.length) return;
   subs.forEach(s => {
-    const linked = players.find(p => p.id === s.subForId);
     const card = document.createElement('div');
-    card.className = 'mob-bench-card' + (linked ? ' linked' : '');
+    card.className = 'mob-bench-card';
     const dotBg = s.color || 'var(--wh)';
     card.innerHTML = `
       <button class="mob-bench-del" onclick="mobRemoveSub(${s.id})" title="Entfernen">✕</button>
       <div style="width:44px;height:44px;border-radius:50%;background:${dotBg};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gd);flex-shrink:0;border:2px solid rgba(255,255,255,.7);">${s.num||'?'}</div>
       <div class="mob-bench-card-name">${s.name||'–'}</div>
       <div class="mob-bench-card-pos">${s.pos||'–'}</div>
-      ${linked ? `<div class="mob-bench-card-link">⇄ ${linked.name||'#'+linked.num}</div>` : ''}
-      <button class="mob-bench-swap-btn ${linked?'active-link':''}" onclick="openSubSwapSheet(${s.id})">
-        ${linked ? '⇄ Ändern' : '⇄ Einwechseln'}
-      </button>
     `;
     grid.appendChild(card);
   });
-}
-
-let pendingSubSwapId = null;
-
-function openSubSwapSheet(subId) {
-  pendingSubSwapId = subId;
-  const sub = subs.find(s => s.id === subId);
-  if(!sub) return;
-  const title = document.getElementById('sheetSubSwapTitle');
-  const list = document.getElementById('subSwapList');
-  if(title) title.textContent = `${sub.num} ${sub.name} — einwechseln für:`;
-  list.innerHTML = '';
-
-  // Info hint
-  const hint = document.createElement('div');
-  hint.style.cssText = 'font-size:.75rem;color:var(--gr);padding:8px 16px 12px;line-height:1.5;';
-  hint.textContent = 'Spieler antippen → Einwechslung wird in der Ende-Ansicht eingetragen.';
-  list.appendChild(hint);
-
-  const fieldPlayers = players.filter(p => p.name);
-  if(!fieldPlayers.length) {
-    list.innerHTML += '<div style="color:var(--gr);padding:20px 16px;text-align:center;font-size:.85rem;">Keine Spieler auf dem Feld</div>';
-  } else {
-    fieldPlayers.forEach(p => {
-      const item = document.createElement('div');
-      item.className = 'mob-field-player-item';
-      const isCurrent = p.id === sub.subForId;
-      const dotBg = p.color || 'var(--wh)';
-      item.innerHTML = `
-        <div style="width:40px;height:40px;border-radius:50%;background:${dotBg};display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gd);flex-shrink:0;border:2px solid rgba(255,255,255,.4);">${p.num||'?'}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="mob-fpi-name">${p.name}</div>
-          <div style="font-size:.68rem;color:var(--gr);">${p.pos||'–'}</div>
-        </div>
-        ${isCurrent ? '<span style="color:#27ae60;font-size:.8rem;font-weight:700;padding:3px 8px;background:rgba(39,174,96,.15);border-radius:6px;">Aktiv ✓</span>' : '<span style="font-size:.75rem;color:var(--gr);">⇄ Wechsel</span>'}
-      `;
-      item.onclick = () => {
-        if(isCurrent) {
-          // Undo substitution in end snapshot
-          sub.subForId = null;
-          undoSubstitutionInEnd(sub, p.id);
-          closeMobSheet();
-          renderMobBench();
-          renderSubs();
-          saveStorage();
-          showToast('Einwechslung rückgängig');
-        } else {
-          // Execute substitution into Ende view
-          sub.subForId = p.id;
-          applySubstitutionToEnd(sub, p.id);
-          closeMobSheet();
-          renderMobBench();
-          renderSubs();
-          saveStorage();
-          showToast(`↑ ${sub.name}  ↓ ${p.name}`);
-        }
-      };
-      list.appendChild(item);
-    });
-  }
-  openMobSheet('sheetSubSwap');
-}
-
-function applySubstitutionToEnd(sub, fieldPlayerId) {
-  // Ensure we have an end snapshot to work with
-  if(!snapshots.end) {
-    if(snapshots.start) snapshots.end = JSON.parse(JSON.stringify(snapshots.start));
-    else snapshots.end = { formation: curFormation, players: JSON.parse(JSON.stringify(players)), subs: JSON.parse(JSON.stringify(subs)), arrows: [] };
-  }
-  const endPlayers = snapshots.end.players;
-  const fieldP = endPlayers.find(x => x.id === fieldPlayerId);
-  if(!fieldP) return;
-  // Replace field player with sub in the end snapshot
-  const orig = { num: fieldP.num, name: fieldP.name, color: fieldP.color, pos: fieldP.pos };
-  fieldP.num    = sub.num;
-  fieldP.name   = sub.name;
-  fieldP.color  = sub.color || fieldP.color;
-  fieldP.subIn  = true;      // mark as substituted in
-  fieldP.subOut = orig;      // remember who came out
-  // Switch to Ende view so the change is visible
-  switchLineupView('end');
-  // Switch mobile nav to lineup tab
-  document.querySelectorAll('.mnb').forEach(b => b.classList.remove('active'));
-  const ln = document.getElementById('mnb-lineup'); if(ln) ln.classList.add('active');
-  const pc = document.querySelector('.pitch-center'); if(pc) pc.style.display = '';
-  document.getElementById('mobViewRoster')?.classList.add('mob-hidden');
 }
 
 // ── Team Kit Color ──────────────────────────────────
@@ -4610,18 +4304,48 @@ function applyTeamKitColor() {
   showToast('Teamfarbe angewendet');
 }
 
-function undoSubstitutionInEnd(sub, fieldPlayerId) {
-  if(!snapshots.end) return;
-  const fieldP = snapshots.end.players.find(x => x.id === fieldPlayerId);
-  if(!fieldP || !fieldP.subOut) return;
-  const orig = fieldP.subOut;
-  fieldP.num    = orig.num;
-  fieldP.name   = orig.name;
-  fieldP.color  = orig.color;
-  fieldP.pos    = orig.pos;
-  delete fieldP.subIn;
-  delete fieldP.subOut;
-  if(curView === 'end') renderPitch();
+// ── LIVE SUBSTITUTIONS ──────────────────────────────
+// Recording a substitution: tap/click the field player who came off (Live
+// view only), pick the replacement from the whole Kader, enter the minute.
+// The position keeps its id/x/y — only its identity changes — so Final can
+// later tell, per position, whether it was substituted (see computeFinalPlayers()).
+function performLiveSubstitution(incoming, playerId) {
+  const p = players.find(x => x.id === playerId);
+  if(!p) return;
+  showPrompt('Einwechsel-Minute', '', minuteInput => {
+    saveHistory();
+    const minute = (minuteInput||'').replace(/[^0-9+]/g, '');
+    p.subOut = { num: p.num, name: p.name, color: p.color, pos: p.pos, minute };
+    p.subIn = true;
+    p.num = incoming.num;
+    p.name = incoming.name;
+    if(incoming.color) p.color = incoming.color;
+    closeMobSheet();
+    closeEdit();
+    renderPitch();
+    renderRoster();
+    saveStorage();
+    showToast(`${incoming.name} ↑ für ${p.subOut.name}${minute ? ' ('+minute+"')" : ''}`);
+  });
+}
+
+function undoLiveSubstitution(playerId) {
+  const p = players.find(x => x.id === playerId);
+  if(!p || !p.subOut) return;
+  saveHistory();
+  const orig = p.subOut;
+  p.num = orig.num;
+  p.name = orig.name;
+  p.color = orig.color;
+  p.pos = orig.pos;
+  delete p.subIn;
+  delete p.subOut;
+  closeMobSheet();
+  closeEdit();
+  renderPitch();
+  renderRoster();
+  saveStorage();
+  showToast('Wechsel rückgängig gemacht');
 }
 
 function mobRemoveSub(subId) {
