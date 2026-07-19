@@ -95,7 +95,7 @@ textarea{resize:vertical;min-height:70px;}
 .player{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:pointer;transform:translate(-50%,-50%);z-index:10;user-select:none;-webkit-user-select:none;transition:transform .12s;}
 .player:hover{transform:translate(-50%,-50%) scale(1.08);}
 .player.sel .pdot{box-shadow:0 0 0 3px var(--acc),0 4px 14px rgba(0,0,0,.5);}
-.player.longpress-pending .pdot{transform:scale(1.18);box-shadow:0 0 0 4px rgba(232,200,74,.55),0 4px 14px rgba(0,0,0,.5);}
+body.arrow-mode-active .player .pdot{box-shadow:0 0 0 3px rgba(232,200,74,.6),0 4px 14px rgba(0,0,0,.5);}
 .pdot{width:clamp(32px,5vw,44px);height:clamp(32px,5vw,44px);border-radius:50%;background:var(--wh);border:2.5px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:clamp(.85rem,1.4vw,1.1rem);color:var(--gd);box-shadow:0 3px 10px rgba(0,0,0,.45);position:relative;transition:all .15s;}
 .pname{margin-top:3px;font-size:clamp(.52rem, 1.1vw, .78rem);font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.8);white-space:nowrap;text-align:center;background:rgba(0,0,0,.38);padding:1px 5px;border-radius:3px;max-width:90px;overflow:visible;}
 /* stats badges */
@@ -523,6 +523,10 @@ body.mob-home-active .mob-hdr-extra{display:none!important;}
           style="background:rgba(0,0,0,.35);border:none;border-radius:50%;width:30px;height:30px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .18s;"
           onmouseenter="this.style.background='rgba(232,200,74,.25)'"
           onmouseleave="this.style.background='rgba(0,0,0,.35)'">⬇</button>
+      </div>
+      <div id="arrowModeBanner" onclick="toggleArrowMode(false)"
+        style="display:none;align-items:center;justify-content:center;gap:6px;margin-top:8px;padding:6px 12px;background:rgba(232,200,74,.16);border:1px solid rgba(232,200,74,.4);border-radius:20px;font-size:.74rem;font-weight:600;color:var(--acc);cursor:pointer;">
+        ➜ Laufwege-Modus – Punkt ziehen zieht einen Pfeil · zum Beenden antippen
       </div>
     </div>
     <div class="pitch-wrap" id="pitchWrap">
@@ -1399,6 +1403,7 @@ function computeFinalPlayers() {
 }
 
 function switchLineupView(view) {
+  if(arrowMode) toggleArrowMode(false);
   // Save current non-combined state before leaving (Final is never saved — it's derived)
   if(curView !== 'combined') snapshots[curView] = getSnapshot();
 
@@ -1771,20 +1776,18 @@ function renderPitch() {
     }
 
     if(!readOnly) {
-      // Left click = drag/move/swap
+      // Left click/touch: normally drag = move, tap/click = assign a player.
+      // In Laufwege mode (toggled by a double-click/double-tap on any dot),
+      // dragging draws an arrow instead of moving the dot.
       el.addEventListener('mousedown', e => {
-        if(e.button === 0) startDrag(e, p.id);
-      });
-      // Right click = draw arrow from this player
-      el.addEventListener('mousedown', e => {
-        if(e.button === 2) startArrowDrag(e, p.id);
+        if(e.button !== 0) return;
+        if(arrowMode) startArrowDrag(e, p.id);
+        else startDrag(e, p.id);
       });
       el.addEventListener('contextmenu', e => e.preventDefault());
 
-      // Touch: long-press (without moving) = draw an arrow; short tap or
-      // immediate drag = select / move, same as before.
       el.addEventListener('touchstart', e => { onPlayerTouchStart(e, p.id, el); }, {passive:false});
-      el.addEventListener('click', e => { e.stopPropagation(); selectPlayer(p.id); });
+      el.addEventListener('click', e => { e.stopPropagation(); handleDotTap(p.id); });
 
       // Drop target for roster dragging (Start: assign a starter; Live: record a substitution)
       el.addEventListener('dragover', e => {
@@ -2790,7 +2793,7 @@ function onDragEndT(e){
       document.removeEventListener('touchmove',onDragMoveT);
       document.removeEventListener('touchend',onDragEndT);
       saveHistory();
-      selectPlayer(tapId);
+      handleDotTap(tapId);
       return;
     }
     saveHistory();
@@ -2864,10 +2867,43 @@ function maybeDrawArrow(pid, startPos) {
   }
 }
 
-// Right-click drag (desktop) / long-press then drag (touch): draw an arrow
-// from a player without moving them.
+// Laufwege ("arrow") mode: toggled by double-click/double-tap on any dot.
+// While active, dragging a dot draws an arrow instead of moving the player.
+let arrowMode = false;
 let arrowDragId = null;
 let arrowDragStart = null;
+
+// Disambiguates a single click/tap (assign a player from the Kader) from a
+// double click/tap (toggle Laufwege mode) — used by both desktop click and
+// mobile tap handling so the two platforms share one gesture model.
+let _dotTapTimer = null;
+let _lastDotTap = null;
+function handleDotTap(pid) {
+  const now = Date.now();
+  if(_lastDotTap && _lastDotTap.pid === pid && (now - _lastDotTap.time) < 350) {
+    if(_dotTapTimer) { clearTimeout(_dotTapTimer); _dotTapTimer = null; }
+    _lastDotTap = null;
+    toggleArrowMode();
+    return;
+  }
+  _lastDotTap = { pid, time: now };
+  if(_dotTapTimer) clearTimeout(_dotTapTimer);
+  _dotTapTimer = setTimeout(() => {
+    _dotTapTimer = null;
+    _lastDotTap = null;
+    // A plain single tap/click while Laufwege mode is active shouldn't open
+    // the assign sheet — that mode is entirely about dragging to draw arrows.
+    if(!arrowMode) selectPlayer(pid);
+  }, 300);
+}
+
+function toggleArrowMode(force) {
+  arrowMode = (force !== undefined) ? force : !arrowMode;
+  document.body.classList.toggle('arrow-mode-active', arrowMode);
+  const banner = document.getElementById('arrowModeBanner');
+  if(banner) banner.style.display = arrowMode ? 'flex' : 'none';
+  showToast(arrowMode ? '➜ Laufwege-Modus: Punkt ziehen zieht einen Pfeil' : 'Laufwege-Modus beendet');
+}
 
 function startArrowDrag(e, pid) {
   e.preventDefault();
@@ -2936,44 +2972,19 @@ function onArrowDragEnd(e) {
   document.removeEventListener('mouseup', onArrowDragEnd);
 }
 
-// ── Touch: long-press a player (without moving), then drag to draw ──
+// Touch start on a player dot: in Laufwege mode, any drag draws an arrow;
+// otherwise hand off to the normal move-drag (which itself distinguishes a
+// plain tap from a drag via startDragTouch/onDragEndT).
 function onPlayerTouchStart(e, pid, el) {
   e.preventDefault();
-  const t = e.touches[0];
-  const startX = t.clientX, startY = t.clientY;
-  const pending = { timer: null, moved: false };
-
-  pending.timer = setTimeout(() => {
-    if(pending.moved) return;
-    cleanup();
-    el.classList.remove('longpress-pending');
-    if(navigator.vibrate) navigator.vibrate(15);
+  if(arrowMode) {
     if(_beginArrowDrag(pid)) {
       document.addEventListener('touchmove', onArrowDragMoveT, {passive:false});
       document.addEventListener('touchend', onArrowDragEndT);
     }
-  }, 450);
-  el.classList.add('longpress-pending');
-
-  function onMove(ev) {
-    ev.preventDefault();
-    const tt = ev.touches[0];
-    const dx = tt.clientX - startX, dy = tt.clientY - startY;
-    if(!pending.moved && Math.sqrt(dx*dx+dy*dy) > 10) {
-      pending.moved = true;
-      cleanup();
-      el.classList.remove('longpress-pending');
-      startDragTouch(e, pid); // hand off to the normal move-drag
-    }
+  } else {
+    startDragTouch(e, pid);
   }
-  function onEnd() { cleanup(); el.classList.remove('longpress-pending'); }
-  function cleanup() {
-    clearTimeout(pending.timer);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('touchend', onEnd);
-  }
-  document.addEventListener('touchmove', onMove, {passive:false});
-  document.addEventListener('touchend', onEnd, {passive:false});
 }
 
 function onArrowDragMoveT(e) {
@@ -3543,6 +3554,22 @@ async function saveToSupabase(json, allowSkipIfStale) {
     const upsertPromise = sbClient
       .from(SB_TABLE)
       .upsert({ key: SB_KEY, data: json }, { onConflict: 'key' });
+    // On a slow connection (e.g. stadium WiFi) the request can legitimately
+    // take longer than SB_TIMEOUT_MS to come back yet still succeed on the
+    // server. We stop waiting for UI purposes below, but the request itself
+    // keeps running in the background — if we didn't reconcile it here, a
+    // late success would leave _lastKnownSavedAt behind reality. The NEXT
+    // ambient sync tick would then see remote as "newer" than what this same
+    // tab already knows (because of its own delayed write), mistake it for a
+    // change from another device, and pull-and-overwrite everything the user
+    // has done since — which is exactly the "Daten von anderem Gerät
+    // aktualisiert" toast firing on a solo, single-device session.
+    upsertPromise.then(({error: lateError}) => {
+      if (!lateError) {
+        _lastKnownSavedAt = Math.max(_lastKnownSavedAt, JSON.parse(json)._savedAt || 0);
+        if (_sbPendingSave === json) { _sbPendingSave = null; _sbSaveFailCount = 0; }
+      }
+    }).catch(()=>{});
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('timeout')), SB_TIMEOUT_MS)
     );
@@ -4206,6 +4233,7 @@ function mobKaderShowEditor() {
 // "← Start" on the pitch: step back one level to the Aufstellung chooser
 // (not all the way to the top-level start screen — that's the logo's job).
 function mobBackToChooser() {
+  if(arrowMode) toggleArrowMode(false);
   mobShowAufstellung();
 }
 
@@ -4213,6 +4241,7 @@ function mobBackToChooser() {
 // screen on mobile; on desktop, the closest equivalent (lineup view, any
 // edit panel closed).
 function goHome() {
+  if(arrowMode) toggleArrowMode(false);
   closeEdit();
   if (isMobile()) mobShowHome();
   else showView('lineup');
